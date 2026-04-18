@@ -65,4 +65,5 @@ export const RECENT_DIRS_KEY = "freecode:recent_dirs";
 export const COMPACT_THRESHOLD_KEY = "freecode:compact_threshold";
 export const AUTO_COMPACT_KEY = "freecode:auto_compact";
 export const SESSION_ID_KEY = "freecode:session_id";
+export const AUTO_OPEN_PROJECT_KEY = "freecode:auto_open_project";
 export const DEFAULT_THRESHOLD = 80;

@@ -7,6 +7,7 @@ import {
   DEFAULT_THRESHOLD, 
   COMPACT_THRESHOLD_KEY, 
   AUTO_COMPACT_KEY,
+  AUTO_OPEN_PROJECT_KEY,
   COMMANDS,
   EFFORT_LEVELS
 } from "../lib/constants";
@@ -15,6 +16,8 @@ import { generateSessionId, getOrCreateSessionId, saveRecentDir } from "../lib/u
 export function useChat() {
   const [workingDir, setWorkingDir] = useState<string | null>(() => {
     if (typeof window === "undefined") return null;
+    const shouldAutoOpen = localStorage.getItem(AUTO_OPEN_PROJECT_KEY) !== "false";
+    if (!shouldAutoOpen) return null;
     return localStorage.getItem("freecode:working_dir") || null;
   });
   const [messages, setMessages] = useState<MsgKind[]>([]);
@@ -38,6 +41,10 @@ export function useChat() {
   const [autoCompact, setAutoCompact] = useState(() => {
     if (typeof window === "undefined") return true;
     return localStorage.getItem(AUTO_COMPACT_KEY) !== "false";
+  });
+  const [autoOpenProject, setAutoOpenProject] = useState(() => {
+    if (typeof window === "undefined") return true;
+    return localStorage.getItem(AUTO_OPEN_PROJECT_KEY) !== "false";
   });
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [showReloadBanner, setShowReloadBanner] = useState(false);
@@ -193,6 +200,10 @@ export function useChat() {
   useEffect(() => {
     localStorage.setItem(AUTO_COMPACT_KEY, String(autoCompact));
   }, [autoCompact]);
+
+  useEffect(() => {
+    localStorage.setItem(AUTO_OPEN_PROJECT_KEY, String(autoOpenProject));
+  }, [autoOpenProject]);
 
   useEffect(() => {
     localStorage.setItem("freecode:model", model);
@@ -374,6 +385,7 @@ export function useChat() {
     savedSessions, setSavedSessions,
     compactThreshold, setCompactThreshold,
     autoCompact, setAutoCompact,
+    autoOpenProject, setAutoOpenProject,
     connectionError, setConnectionError,
     showReloadBanner, setShowReloadBanner,
     runCommand,

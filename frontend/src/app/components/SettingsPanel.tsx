@@ -2,6 +2,7 @@
  
 import { useState, useEffect } from "react";
 import styles from "./SettingsPanel.module.css";
+import { useChatContext } from "../context/ChatContext";
 import { EyeIcon, EyeOffIcon, CopyIcon, SaveIcon, XIcon } from "./Icons";
 import { Popover } from "./Popover";
 import McpSettings from "./McpSettings";
@@ -18,6 +19,7 @@ export default function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [showKey, setShowKey] = useState(false);
+  const { autoOpenProject, setAutoOpenProject } = useChatContext();
 
   useEffect(() => {
     if (isOpen) {
@@ -89,6 +91,18 @@ export default function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                         <CopyIcon />
                     </button>
                 </div>
+            </div>
+          </div>
+  
+          <div className={styles.section}>
+            <div className={styles.toggleRow}>
+              <span className={styles.toggleLabel}>Remember last project</span>
+              <input 
+                type="checkbox" 
+                className={styles.toggleInput}
+                checked={autoOpenProject}
+                onChange={(e) => setAutoOpenProject(e.target.checked)}
+              />
             </div>
           </div>
  
