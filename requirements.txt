@@ -1,9 +1,11 @@
 google-genai>=1.0.0
 google-generativeai>=0.7.0
+fastapi>=0.111.0
+uvicorn>=0.29.0
 python-dotenv>=1.0.0
 websockets>=14.1
 pywebview>=5.0
+mcp>=1.0.0
 qtpy>=2.4.1; sys_platform == 'linux'
 PyQt6>=6.7.0; sys_platform == 'linux'
 PyQt6-WebEngine>=6.7.0; sys_platform == 'linux'
-mcp>=1.0.0

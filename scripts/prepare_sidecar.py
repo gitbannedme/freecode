@@ -21,16 +21,17 @@ def main():
         
     print(f"Building backend binary from {backend_dir / 'server.py'}...")
     
-    os.chdir(backend_dir)
+    # Build with PyInstaller from the ROOT
+    # This ensures agent_core and backend packages are correctly discovered.
+    os.chdir(root)
     
-    # Build with PyInstaller
-    # --collect-all ensures ALL submodules and data files are bundled,
-    # which is critical for websockets and google-genai which use lazy imports.
     subprocess.run([
         "pyinstaller",
         "--onefile",
         "--name", "server",
         "--clean",
+        "--collect-all", "uvicorn",
+        "--collect-all", "fastapi",
         "--collect-all", "websockets",
         "--collect-all", "google.genai",
         "--hidden-import", "websockets.legacy",
@@ -38,16 +39,16 @@ def main():
         "--hidden-import", "websockets.legacy.client",
         "--hidden-import", "google.auth",
         "--hidden-import", "google.auth.transport.requests",
-        "server.py"
+        str(backend_dir / "server.py")
     ], check=True)
     
     # Move to src-tauri/bin
     if not src_tauri_bin.exists():
         src_tauri_bin.mkdir(parents=True)
         
-    dist_file = backend_dir / "dist" / "server.exe"
+    dist_file = root / "dist" / "server.exe"
     if os.name != "nt":
-        dist_file = backend_dir / "dist" / "server"
+        dist_file = root / "dist" / "server"
         
     # Get target triple for Tauri
     import platform
