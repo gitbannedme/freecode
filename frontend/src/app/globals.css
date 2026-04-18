@@ -574,6 +574,11 @@ button, input, textarea, select {
    One spacing    : 16px  (halved/doubled as needed)
    One radius     : 10px
    ───────────────────────────────────────────────── */
+.welcome-area {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  flex: 1; height: 100%; padding: 40px;
+}
+
 .pss {
   display: flex;
   align-items: center;
@@ -612,11 +617,14 @@ button, input, textarea, select {
 .pss-chip {
   display: inline-flex; align-items: center; gap: 6px;
   font-size: 11px; color: #8b949e;
+  background: transparent;
   border: 1px solid var(--border); border-radius: 16px;
   padding: 4px 12px;
-  transition: border-color 0.15s;
+  transition: all 0.15s;
+  cursor: default;
 }
-.pss-chip:hover { border-color: var(--accent); }
+.pss-chip.clickable { cursor: pointer; }
+.pss-chip:hover { border-color: var(--accent); background: rgba(255, 255, 255, 0.02); }
 .pss-chip-cmd {
   font-family: var(--font-mono); font-weight: 700;
   color: var(--accent);

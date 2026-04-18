@@ -2,28 +2,29 @@ import React from "react";
 import Image from "next/image";
 import { COMMANDS } from "../lib/constants";
 
+const HINTS = ["/model", "/compact", "/help"] as const;
+
 export function Welcome({ show, onRun }: { show: boolean; onRun: (cmd: string) => void }) {
   if (!show) return null;
   
-  const getDesc = (name: string) => COMMANDS.find(c => c.name === name)?.description || "";
-
   return (
-    <div className="welcome-splash">
-      <div className="splash-bird">
-        <Image src="/logo.svg" width={64} height={64} alt="FreeCode Logo" priority />
-      </div>
-      <h1 className="splash-title">FREECODE</h1>
-      <p className="splash-subtitle">Your personal agentic coding assistant.</p>
+    <div className="welcome-area">
+      <div className="pss-inner">
+        {/* Branding */}
+        <div className="pss-brand">
+          <Image src="/logo.svg" width={40} height={40} alt="FreeCode" priority />
+          <h1 className="pss-title">FREECODE</h1>
+          <p className="pss-sub">Your personal agentic coding assistant.</p>
+        </div>
 
-      <div className="splash-hints">
-        <div className="hint-row clickable" onClick={() => onRun("/model")}>
-          <span className="hint-key">/model</span> {getDesc("/model")}
-        </div>
-        <div className="hint-row clickable" onClick={() => onRun("/compact")}>
-          <span className="hint-key">/compact</span> {getDesc("/compact")}
-        </div>
-        <div className="hint-row clickable" onClick={() => onRun("/help")}>
-          <span className="hint-key">/help</span> {getDesc("/help")}
+        {/* Hint chips (clickable) */}
+        <div className="pss-hints">
+          {HINTS.map(name => (
+            <button key={name} className="pss-chip clickable" onClick={() => onRun(name)}>
+              <span className="pss-chip-cmd">{name}</span>
+              {COMMANDS.find(c => c.name === name)?.description}
+            </button>
+          ))}
         </div>
       </div>
     </div>
