@@ -168,8 +168,11 @@ def _default_working_dir() -> str:
     return _cfg.get("working_dir", ".")
 
 WORKING_DIR = _cfg.get("working_dir") or _default_working_dir()
-PORT = int(os.environ.get("FC_BACKEND_PORT") or _cfg.get("backend_port", 47820))
 HOST = os.environ.get("FC_BACKEND_HOST") or _cfg.get("backend_host", "localhost")
+FRONTEND_PORT = int(os.environ.get("FC_FRONTEND_PORT") or _cfg.get("frontend_port", 47821))
+
+# Global count of active websocket connections
+_ACTIVE_CONNECTIONS = 0
 
 
 async def pick_directory_async():
@@ -301,25 +304,54 @@ async def lifespan(app: FastAPI):
     async def watch_parent():
         nonlocal parent_lost_at
         logger.info(f"Monitoring parent process {parent_pid} with 30s grace period...")
+        
         while True:
             await asyncio.sleep(5)
+            
+            # 1. If we have active websocket connections, stay alive
+            if _ACTIVE_CONNECTIONS > 0:
+                if parent_lost_at:
+                    logger.info("Connection received. Resetting shutdown timer.")
+                parent_lost_at = None
+                continue
+
+            # 2. Check if the frontend port is listening (our 'find frontend' check)
+            frontend_up = False
+            try:
+                import socket
+                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                    s.settimeout(0.5)
+                    if s.connect_ex(("127.0.0.1", FRONTEND_PORT)) == 0:
+                        frontend_up = True
+            except:
+                pass
+            
+            if frontend_up:
+                if parent_lost_at:
+                    logger.info("Frontend detected. Resetting shutdown timer.")
+                parent_lost_at = None
+                continue
+
+            # 3. Check if parent process is alive
+            parent_alive = True
             try:
                 os.kill(parent_pid, 0)
-                parent_lost_at = None # Reset if found
-            except (ProcessLookupError, PermissionError, OSError) as e:
-                # If it's a ProcessLookupError, the parent is definitely gone.
-                # PermissionError/OSError might happen on Windows even if alive, 
-                # but for simplicity we treat "can't reach parent" as the start of the timer.
-                if parent_lost_at is None:
-                    parent_lost_at = asyncio.get_event_loop().time()
-                    logger.info("Parent process not reachable. Starting 30s shutdown timer...")
-                
-                elapsed = asyncio.get_event_loop().time() - parent_lost_at
-                if elapsed > 30:
-                    logger.info(f"Parent process missing for {int(elapsed)}s. Shutting down backend...")
-                    os._exit(0)
-            except Exception:
-                pass
+            except (ProcessLookupError, PermissionError, OSError):
+                parent_alive = False
+            
+            if parent_alive:
+                parent_lost_at = None
+                continue
+            
+            # If we got here, parent is unreachable, no connections, and no frontend
+            if parent_lost_at is None:
+                parent_lost_at = asyncio.get_event_loop().time()
+                logger.info("Parent/Frontend not reachable. Starting 30s shutdown timer...")
+            
+            elapsed = asyncio.get_event_loop().time() - parent_lost_at
+            if elapsed > 30:
+                logger.info(f"Orphaned for {int(elapsed)}s with no activity. Shutting down backend...")
+                os._exit(0)
 
     monitor = asyncio.create_task(watch_parent())
     yield
@@ -441,7 +473,9 @@ async def remove_mcp_server(name: str, session_id: str = "default"):
 
 @app.websocket("/")
 async def websocket_endpoint(websocket: WebSocket):
+    global _ACTIVE_CONNECTIONS
     await websocket.accept()
+    _ACTIVE_CONNECTIONS += 1
     session_id = None
     session = None
 
@@ -576,6 +610,8 @@ async def websocket_endpoint(websocket: WebSocket):
 
     except Exception as e:
         logger.exception(f"WebSocket handler error: {e}")
+    finally:
+        _ACTIVE_CONNECTIONS -= 1
 
 
 async def _send_system(websocket: WebSocket, message: str):

@@ -889,3 +889,46 @@ html, body {
   animation: popIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   overflow: hidden;
 }
+
+/* ── Help & UI Messages ── */
+.msg-system-ui { padding: 4px 40px; }
+.help-block {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  margin: 8px 0;
+  max-width: 600px;
+}
+.help-header {
+  font-size: 9px;
+  font-weight: 800;
+  color: var(--dim-text);
+  letter-spacing: 0.15em;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--border-subtle);
+  padding-bottom: 8px;
+  opacity: 0.8;
+}
+.help-row {
+  display: flex;
+  align-items: baseline;
+  gap: 20px;
+  padding: 6px 0;
+}
+.help-name {
+  color: var(--accent);
+  font-weight: 700;
+  font-family: var(--font-mono);
+  min-width: 85px;
+  cursor: pointer;
+  font-size: 12px;
+}
+.help-name:hover {
+  filter: brightness(1.2);
+}
+.help-desc {
+  color: var(--fg-muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
