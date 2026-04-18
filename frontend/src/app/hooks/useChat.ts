@@ -133,20 +133,23 @@ export function useChat() {
           break;
         }
         case "tool_result": {
-          const toolIdx = pendingToolRef.current.get(msg.tool_name);
-          if (toolIdx !== undefined) {
-            const block = next[toolIdx];
-            if (block?.kind === "tool_call") {
-              next[toolIdx] = {
+          let found = false;
+          for (let i = next.length - 1; i >= 0; i--) {
+            const block = next[i];
+            if (block.kind === "tool_call" && block.name === msg.tool_name) {
+              next[i] = {
                 kind: "tool_result",
                 name: block.name,
                 args: block.args,
                 result: msg.result ?? "",
+                error: msg.error
               };
+              found = true;
+              break;
             }
-            pendingToolRef.current.delete(msg.tool_name);
-          } else {
-            next.push({ kind: "tool_result", name: msg.tool_name, args: {}, result: msg.result ?? "" });
+          }
+          if (!found) {
+            next.push({ kind: "tool_result", name: msg.tool_name, args: {}, result: msg.result ?? "", error: msg.error });
           }
           break;
         }

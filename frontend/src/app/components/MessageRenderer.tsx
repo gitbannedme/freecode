@@ -15,7 +15,7 @@ export function MessageRenderer({ msg, i, runCommand }: MessageRendererProps) {
 
     case "thinking":
       return (
-        <div key={i} className={`msg msg-assistant${msg.done ? " done" : ""}`}>
+        <div key={i} className="msg msg-assistant">
           <ThinkingBlock chunks={msg.chunks} done={msg.done} />
         </div>
       );
@@ -51,12 +51,15 @@ export function MessageRenderer({ msg, i, runCommand }: MessageRendererProps) {
 
     case "help":
       return (
-        <div key={i} className="msg msg-system-ui">
+        <div key={i} className="msg msg-assistant">
           <div className="help-block">
-            <div className="help-header">AVAILABLE COMMANDS</div>
+            <div className="help-header">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>
+              <span>Available Commands</span>
+            </div>
             {msg.commands.map(c => (
-              <div key={c.name} className="help-row">
-                <span className="help-name" onClick={() => runCommand(c.name)}>{c.name}</span>
+              <div key={c.name} className="help-row" onClick={() => runCommand(c.name)}>
+                <span className="help-name">{c.name}</span>
                 <span className="help-desc">{c.description}</span>
               </div>
             ))}
@@ -65,8 +68,13 @@ export function MessageRenderer({ msg, i, runCommand }: MessageRendererProps) {
       );
 
     case "error":
-      return <div key={i} className="msg-error">✗ {msg.text}</div>;
-    
+      return (
+        <div key={i} className="msg-error">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" /></svg>
+          <span>{msg.text}</span>
+        </div>
+      );
+
     default:
       return null;
   }

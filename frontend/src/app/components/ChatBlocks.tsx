@@ -1,7 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 
+/* ── Effort Icon ─────────────────────────────────────── */
 const EFFORT_FILL: Record<string, number> = { MINIMAL: 1, LOW: 2, MEDIUM: 3, HIGH: 4 };
-
 export function EffortIcon({ effort }: { effort: string }) {
   const fill = EFFORT_FILL[effort] ?? 3;
   return (
@@ -13,22 +17,100 @@ export function EffortIcon({ effort }: { effort: string }) {
   );
 }
 
+/* ── Copy Button ─────────────────────────────────────── */
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = useCallback(() => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }, [text]);
+  return (
+    <button className="code-copy-btn" onClick={handleCopy} title="Copy">
+      {copied ? (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+      ) : (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
+      )}
+    </button>
+  );
+}
+
+/* ── Thinking Block ──────────────────────────────────── */
 export function ThinkingBlock({ chunks, done }: { chunks: string[]; done: boolean }) {
   const [open, setOpen] = useState(false);
   const text = chunks.join("");
+  const tokenCount = Math.round(text.length / 4);
   return (
-    <div className="thinking-block">
+    <div className={`thinking-block${done ? " done" : ""}`}>
       <div className="thinking-header" onClick={() => setOpen(o => !o)}>
-        <span className={`thinking-expand${open ? " open" : ""}`}>▶</span>
-        <span style={{ color: "var(--dim2)", fontSize: 10 }}>{done ? "●" : "○"}</span>
-        <span>{done ? "Thought" : "Thinking"}</span>
-        {!open && text && <span style={{ color: "var(--dim3)", fontSize: 10, marginLeft: "auto" }}>{Math.round(text.length / 4)} tokens</span>}
+        <svg className={`block-chevron${open ? " open" : ""}`} width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
+        <div className={`thinking-pulse${done ? " done" : ""}`} />
+        <span className="block-label">{done ? "Thought" : "Thinking"}</span>
+        {!open && tokenCount > 0 && <span className="block-meta">{tokenCount} tokens</span>}
       </div>
       {open && <div className="thinking-content">{text}</div>}
     </div>
   );
 }
 
+/* ── Helpers for tool display ───────────────────────── */
+function humanToolName(name: string): string {
+  return name
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, c => c.toUpperCase());
+}
+
+function toolSummary(name: string, args: Record<string, unknown>): string {
+  const lower = name.toLowerCase();
+  if (lower.includes("read") || lower.includes("view")) {
+    const p = (args.path || args.file || args.AbsolutePath || "") as string;
+    return p ? p.replace(/\\/g, "/").split("/").slice(-2).join("/") : "";
+  }
+  if (lower.includes("write") || lower.includes("create") || lower.includes("edit") || lower.includes("replace")) {
+    const p = (args.path || args.file || args.TargetFile || "") as string;
+    return p ? p.replace(/\\/g, "/").split("/").slice(-2).join("/") : "";
+  }
+  if (lower.includes("search") || lower.includes("grep") || lower.includes("find")) {
+    const q = (args.query || args.Query || args.pattern || args.Pattern || "") as string;
+    return q ? `"${q}"` : "";
+  }
+  if (lower.includes("command") || lower.includes("bash") || lower.includes("shell") || lower.includes("exec")) {
+    const cmd = (args.command || args.CommandLine || args.cmd || "") as string;
+    return cmd ? (cmd.length > 60 ? cmd.slice(0, 57) + "…" : cmd) : "";
+  }
+  if (lower === "list_dir" || lower.includes("ls")) {
+    const p = (args.path || args.DirectoryPath || args.directory || "") as string;
+    return p ? p.replace(/\\/g, "/").split("/").slice(-2).join("/") : "";
+  }
+  // Fallback: show first string arg value
+  const first = Object.values(args).find(v => typeof v === "string") as string | undefined;
+  return first ? (first.length > 50 ? first.slice(0, 47) + "…" : first) : "";
+}
+
+function ToolIcon({ hasResult, isError }: { hasResult: boolean; isError: boolean }) {
+  if (!hasResult) {
+    return (
+      <svg className="tool-status-icon spinning" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+      </svg>
+    );
+  }
+  if (isError) {
+    return (
+      <svg className="tool-status-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent-error)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" />
+      </svg>
+    );
+  }
+  return (
+    <svg className="tool-status-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent-success)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
+  );
+}
+
+/* ── Tool Block ──────────────────────────────────────── */
 export function ToolBlock({
   name,
   args,
@@ -41,30 +123,37 @@ export function ToolBlock({
   resultError?: boolean;
 }) {
   const [open, setOpen] = useState(false);
-  const argsStr = Object.entries(args)
-    .map(([k, v]) => `${k}=${JSON.stringify(v)}`)
-    .join(", ");
-  
+  const summary = toolSummary(name, args);
+  const hasResult = result !== undefined;
+
   return (
-    <div className="tool-block">
+    <div className={`tool-block${hasResult ? (resultError ? " error" : " success") : " pending"}`}>
       <div className={`tool-header${open ? " open" : ""}`} onClick={() => setOpen(o => !o)}>
-        <span className="tool-icon" style={{ color: "var(--accent-blue)", fontSize: 10 }}>{open ? "▼" : "▶"}</span>
-        <span className="tool-name">{name}</span>
-        {!open && <span className="tool-args-inline">{argsStr}</span>}
-        {result !== undefined && (
-          <span style={{ marginLeft: "auto", color: resultError ? "#f85149" : "var(--accent-green)", fontSize: 12 }}>
-            {resultError ? "✕" : "✓"}
-          </span>
-        )}
+        <svg className={`block-chevron${open ? " open" : ""}`} width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
+        <span className="tool-name">{humanToolName(name)}</span>
+        {!open && summary && <span className="tool-summary">{summary}</span>}
+        <span className="tool-status-right">
+          <ToolIcon hasResult={hasResult} isError={!!resultError} />
+        </span>
       </div>
       {open && (
         <div className="tool-body">
-          <div style={{ padding: "8px 12px", color: "var(--dim2)", fontSize: 11, background: "rgba(255,255,255,0.01)", borderBottom: "1px solid var(--border)" }}>
-             {argsStr || "(no args)"}
+          <div className="tool-args-section">
+            {Object.entries(args).map(([k, v]) => (
+              <div key={k} className="tool-arg-row">
+                <span className="tool-arg-key">{k}</span>
+                <span className="tool-arg-val">{typeof v === "string" ? v : JSON.stringify(v)}</span>
+              </div>
+            ))}
+            {Object.keys(args).length === 0 && <span className="tool-arg-empty">No arguments</span>}
           </div>
-          {result !== undefined && (
-            <div className={`tool-result-block ${resultError ? "tool-result-err" : "tool-result-ok"}`}>
-              {result}
+          {hasResult && (
+            <div className={`tool-result-section${resultError ? " error" : ""}`}>
+              <div className="tool-result-header">
+                <span>{resultError ? "Error" : "Output"}</span>
+                <CopyButton text={result} />
+              </div>
+              <pre className="tool-result-content">{result}</pre>
             </div>
           )}
         </div>
@@ -73,39 +162,73 @@ export function ToolBlock({
   );
 }
 
+/* ── Response Block (Markdown) ───────────────────────── */
 export function ResponseBlock({ chunks }: { chunks: string[] }) {
   const text = chunks.join("");
-  const html = text
-    .replace(/\*\*([^\*]+)\*\*/g, "<STRONG>$1</STRONG>")
-    .replace(/\*([^\*]+)\*/g, "<EM>$1</EM>")
-    .replace(/`([^`]+)`/g, "<CODE>$1</CODE>")
-    .replace(/^### (.*?)$/gm, "<H3>$1</H3>")
-    .replace(/^## (.*?)$/gm, "<H2>$1</H2>")
-    .replace(/^# (.*?)$/gm, "<H1>$1</H1>")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/&lt;STRONG&gt;/g, "<strong>")
-    .replace(/&lt;\/STRONG&gt;/g, "</strong>")
-    .replace(/&lt;EM&gt;/g, "<em>")
-    .replace(/&lt;\/EM&gt;/g, "</em>")
-    .replace(/&lt;CODE&gt;/g, "<code>")
-    .replace(/&lt;\/CODE&gt;/g, "</code>")
-    .replace(/&lt;H1&gt;/g, "<h1>")
-    .replace(/&lt;\/H1&gt;/g, "</h1>")
-    .replace(/&lt;H2&gt;/g, "<h2>")
-    .replace(/&lt;\/H2&gt;/g, "</h2>")
-    .replace(/&lt;H3&gt;/g, "<h3>")
-    .replace(/&lt;\/H3&gt;/g, "</h3>")
-    .replace(/\n/g, "<br/>");
-  return <div className="msg-response" dangerouslySetInnerHTML={{ __html: html }} />;
+  return (
+    <div className="msg-response">
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        components={{
+          code({ className, children, ...props }) {
+            const match = /language-(\w+)/.exec(className || "");
+            const codeStr = String(children).replace(/\n$/, "");
+            if (match) {
+              return (
+                <div className="code-block-wrapper">
+                  <div className="code-block-header">
+                    <span className="code-block-lang">{match[1]}</span>
+                    <CopyButton text={codeStr} />
+                  </div>
+                  <SyntaxHighlighter
+                    style={vscDarkPlus}
+                    language={match[1]}
+                    PreTag="div"
+                    customStyle={{
+                      margin: 0,
+                      borderRadius: "0 0 8px 8px",
+                      fontSize: "12px",
+                      lineHeight: "1.5",
+                      background: "#0d1117",
+                    }}
+                  >
+                    {codeStr}
+                  </SyntaxHighlighter>
+                </div>
+              );
+            }
+            return (
+              <code className="inline-code" {...props}>
+                {children}
+              </code>
+            );
+          },
+          pre({ children }) {
+            return <>{children}</>;
+          },
+          table({ children }) {
+            return (
+              <div className="table-wrapper">
+                <table>{children}</table>
+              </div>
+            );
+          },
+          a({ href, children }) {
+            return <a href={href} target="_blank" rel="noopener noreferrer">{children}</a>;
+          }
+        }}
+      >
+        {text}
+      </ReactMarkdown>
+    </div>
+  );
 }
 
+/* ── User Message ────────────────────────────────────── */
 export function UserMsg({ text }: { text: string }) {
   return (
     <div className="msg msg-user">
-      <div className="msg-user-text">
-        <span className="prompt-arrow">&gt;</span>
+      <div className="msg-user-bubble">
         <span>{text}</span>
       </div>
     </div>
