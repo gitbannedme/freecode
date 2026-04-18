@@ -16,6 +16,12 @@ import { generateSessionId, getOrCreateSessionId, saveRecentDir } from "../lib/u
 export function useChat() {
   const [workingDir, setWorkingDir] = useState<string | null>(() => {
     if (typeof window === "undefined") return null;
+    
+    // 1. Session override (if we picked a project in this tab)
+    const sessionDir = sessionStorage.getItem("freecode:active_project");
+    if (sessionDir) return sessionDir;
+
+    // 2. Default startup behavior
     const shouldAutoOpen = localStorage.getItem(AUTO_OPEN_PROJECT_KEY) !== "false";
     if (!shouldAutoOpen) return null;
     return localStorage.getItem("freecode:working_dir") || null;
@@ -353,6 +359,7 @@ export function useChat() {
     const newSessionId = generateSessionId();
     localStorage.setItem(SESSION_ID_KEY, newSessionId);
     localStorage.setItem("freecode:working_dir", dir);
+    sessionStorage.setItem("freecode:active_project", dir);
     saveRecentDir(dir);
     window.location.reload();
   };
