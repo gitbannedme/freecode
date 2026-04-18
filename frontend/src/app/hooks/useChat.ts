@@ -61,6 +61,11 @@ export function useChat() {
   const [showSettings, setShowSettings] = useState(false);
   const [confirmModal, setConfirmModal] = useState<{ title: string; message: string; onConfirm: () => void } | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  
+  // Artifact & Branching State
+  const [activeArtifact, setActiveArtifact] = useState<{ title: string; content: string; language: string } | null>(null);
+  const [pinnedFiles, setPinnedFiles] = useState<string[]>([]);
+  const [branchingIndex, setBranchingIndex] = useState<number | null>(null);
 
   const wsRef = useRef<WebSocket | null>(null);
   const backendHasKey = useRef<boolean>(false);
@@ -346,6 +351,27 @@ export function useChat() {
     }
   }, [effort, workingDir, sessionId, model]);
 
+  const branch = useCallback((index: number) => {
+    setMessages(prev => {
+      const history = prev.slice(0, index + 1);
+      const lastUserIdx = history.map(m => m.kind).lastIndexOf("user");
+      if (lastUserIdx !== -1) {
+        // We find the last user message in the truncated history
+        // and prepare to re-send it or edit it.
+        // For now, we just truncate and let the user re-type or we can auto-fill the input.
+      }
+      return history;
+    });
+  }, []);
+
+  const addPin = useCallback((file: string) => {
+    setPinnedFiles(prev => prev.includes(file) ? prev : [...prev, file]);
+  }, []);
+
+  const removePin = useCallback((file: string) => {
+    setPinnedFiles(prev => prev.filter(f => f !== file));
+  }, []);
+
   const sendMessage = useCallback((text: string) => {
     if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
       setConnectionError("Connection lost. Reconnecting...");
@@ -354,8 +380,15 @@ export function useChat() {
     setConnectionError(null);
     setWorking(true);
     setMessages(prev => [...prev, { kind: "user", text }]);
-    wsRef.current.send(JSON.stringify({ type: "user_input", text, effort, working_dir: workingDir ?? ".", model, session_id: sessionId }));
-  }, [model, workingDir, effort, sessionId]);
+    
+    // Include pins in the message if any
+    const finalMsg: any = { type: "user_input", text, effort, working_dir: workingDir ?? ".", model, session_id: sessionId };
+    if (pinnedFiles.length > 0) {
+      finalMsg.context_files = pinnedFiles;
+    }
+    
+    wsRef.current.send(JSON.stringify(finalMsg));
+  }, [model, workingDir, effort, sessionId, pinnedFiles]);
 
   const handleDirSelect = (dir: string) => {
     if (dir === workingDir) return;
@@ -408,6 +441,10 @@ export function useChat() {
     dirPickerOpen, setDirPickerOpen,
     showSettings, setShowSettings,
     confirmModal, setConfirmModal,
-    showOnboarding, setShowOnboarding
+    showOnboarding, setShowOnboarding,
+    activeArtifact, setActiveArtifact,
+    pinnedFiles, setPinnedFiles,
+    addPin, removePin,
+    branch
   };
 }

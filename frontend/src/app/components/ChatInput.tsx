@@ -18,6 +18,8 @@ export function ChatInput({
     connectionError,
     runCommand,
     sendMessage,
+    pinnedFiles,
+    removePin,
   } = useChatContext();
 
   const [input, setInput] = useState("");
@@ -91,6 +93,19 @@ export function ChatInput({
                 >
                   <span className="cmd-name">{cmd.name}</span>
                   <span className="cmd-desc">{cmd.description}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          {pinnedFiles.length > 0 && (
+            <div className="pin-bar">
+              {pinnedFiles.map(file => (
+                <div key={file} className="pin-chip">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m6 14 1.45-2.9A2 2 0 0 1 9.24 10H14.76a2 2 0 0 1 1.79 1.1L18 14" /><path d="M10 10V6a2 2 0 0 1 2-2v0a2 2 0 0 1 2 2v4" /><path d="M3 14h18" /><path d="M19 14v6a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-6" /></svg>
+                  <span>{file.split(/[\\/]/).pop()}</span>
+                  <div className="pin-remove" onClick={() => removePin(file)}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                  </div>
                 </div>
               ))}
             </div>

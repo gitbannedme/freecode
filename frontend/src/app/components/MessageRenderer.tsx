@@ -11,19 +11,19 @@ interface MessageRendererProps {
 export function MessageRenderer({ msg, i, runCommand }: MessageRendererProps) {
   switch (msg.kind) {
     case "user":
-      return <UserMsg key={i} text={msg.text} />;
+      return <UserMsg key={i} index={i} text={msg.text} />;
 
     case "thinking":
       return (
         <div key={i} className="msg msg-assistant">
-          <ThinkingBlock chunks={msg.chunks} done={msg.done} />
+          <ThinkingBlock index={i} chunks={msg.chunks} done={msg.done} />
         </div>
       );
 
     case "tool_call":
       return (
         <div key={i} className="msg msg-assistant">
-          <ToolBlock name={msg.name} args={msg.args} />
+          <ToolBlock index={i} name={msg.name} args={msg.args} />
         </div>
       );
 
@@ -31,6 +31,7 @@ export function MessageRenderer({ msg, i, runCommand }: MessageRendererProps) {
       return (
         <div key={i} className="msg msg-assistant">
           <ToolBlock
+            index={i}
             name={msg.name}
             args={msg.args}
             result={msg.result}
@@ -42,7 +43,7 @@ export function MessageRenderer({ msg, i, runCommand }: MessageRendererProps) {
     case "response":
       return (
         <div key={i} className="msg msg-assistant">
-          <ResponseBlock chunks={msg.chunks} />
+          <ResponseBlock index={i} chunks={msg.chunks} />
         </div>
       );
 

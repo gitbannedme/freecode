@@ -1107,3 +1107,151 @@ button, input, textarea, select {
   transition: all 0.15s;
 }
 .reload-banner button:hover { background: rgba(88, 166, 255, 0.1); }
+
+/* ── Artifact Panel ────────────────────────────────── */
+.artifact-panel {
+  width: 55%;
+  border-left: 1px solid var(--border);
+  background: var(--bg-main);
+  display: flex;
+  flex-direction: column;
+  z-index: 50;
+  animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+.artifact-header {
+  height: 48px;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.015);
+}
+
+.artifact-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #fff;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.artifact-close {
+  background: none;
+  border: none;
+  color: var(--fg-dim);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  transition: all 0.2s;
+  display: flex;
+}
+.artifact-close:hover {
+  background: var(--bg-hover);
+  color: #fff;
+}
+
+.artifact-body {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+
+.artifact-footer {
+  height: 32px;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  border-top: 1px solid var(--border);
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.artifact-meta {
+  font-size: 10px;
+  color: var(--fg-dim);
+  font-family: var(--font-mono);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+
+/* ── Context Pins ──────────────────────────────────── */
+.pin-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid transparent;
+}
+.pin-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: rgba(88, 166, 255, 0.1);
+  border: 1px solid rgba(88, 166, 255, 0.2);
+  border-radius: 16px;
+  font-size: 11px;
+  color: var(--accent);
+}
+.pin-remove {
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+.pin-remove:hover {
+  opacity: 1;
+}
+
+/* ── Branch Button ──────────────────────────────────── */
+.branch-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  opacity: 0;
+  transition: opacity 0.2s;
+  background: var(--bg-step);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 4px;
+  color: var(--fg-dim);
+  cursor: pointer;
+  z-index: 10;
+}
+.msg:hover .branch-btn {
+  opacity: 1;
+}
+.branch-btn:hover {
+  color: var(--accent);
+  background: var(--bg-hover);
+}
+
+.artifact-pin-btn {
+  background: none;
+  border: 1px solid transparent;
+  color: var(--fg-dim);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  transition: all 0.2s;
+  display: flex;
+}
+.artifact-pin-btn:hover {
+  background: var(--bg-hover);
+  color: var(--accent);
+}
+.artifact-pin-btn.active {
+  color: var(--accent);
+  background: rgba(88, 166, 255, 0.1);
+  border-color: rgba(88, 166, 255, 0.2);
+}
+
+

@@ -3,6 +3,17 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
+import { useChatContext } from "../context/ChatContext";
+
+/* ── Branch Button ──────────────────────────────────── */
+function BranchBtn({ index }: { index: number }) {
+  const { branch } = useChatContext();
+  return (
+    <button className="branch-btn" onClick={() => branch(index)} title="Branch from here">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="6" y1="3" x2="6" y2="15" /><circle cx="18" cy="6" r="3" /><circle cx="6" cy="18" r="3" /><path d="M18 9a9 9 0 0 1-9 9" /></svg>
+    </button>
+  );
+}
 
 /* ── Effort Icon ─────────────────────────────────────── */
 const EFFORT_FILL: Record<string, number> = { MINIMAL: 1, LOW: 2, MEDIUM: 3, HIGH: 4 };
@@ -37,12 +48,13 @@ function CopyButton({ text }: { text: string }) {
 }
 
 /* ── Thinking Block ──────────────────────────────────── */
-export function ThinkingBlock({ chunks, done }: { chunks: string[]; done: boolean }) {
+export function ThinkingBlock({ chunks, done, index }: { chunks: string[]; done: boolean; index: number }) {
   const [open, setOpen] = useState(false);
   const text = chunks.join("");
   const tokenCount = Math.round(text.length / 4);
   return (
     <div className={`thinking-block${done ? " done" : ""}`}>
+      <BranchBtn index={index} />
       <div className="thinking-header" onClick={() => setOpen(o => !o)}>
         <svg className={`block-chevron${open ? " open" : ""}`} width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
         <div className={`thinking-pulse${done ? " done" : ""}`} />
@@ -116,11 +128,13 @@ export function ToolBlock({
   args,
   result,
   resultError,
+  index,
 }: {
   name: string;
   args: Record<string, unknown>;
   result?: string;
   resultError?: boolean;
+  index: number;
 }) {
   const [open, setOpen] = useState(false);
   const summary = toolSummary(name, args);
@@ -128,6 +142,7 @@ export function ToolBlock({
 
   return (
     <div className={`tool-block${hasResult ? (resultError ? " error" : " success") : " pending"}`}>
+      <BranchBtn index={index} />
       <div className={`tool-header${open ? " open" : ""}`} onClick={() => setOpen(o => !o)}>
         <svg className={`block-chevron${open ? " open" : ""}`} width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
         <span className="tool-name">{humanToolName(name)}</span>
@@ -163,10 +178,12 @@ export function ToolBlock({
 }
 
 /* ── Response Block (Markdown) ───────────────────────── */
-export function ResponseBlock({ chunks }: { chunks: string[] }) {
+export function ResponseBlock({ chunks, index }: { chunks: string[]; index: number }) {
+  const { setActiveArtifact } = useChatContext();
   const text = chunks.join("");
   return (
     <div className="msg-response">
+      <BranchBtn index={index} />
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
@@ -178,7 +195,16 @@ export function ResponseBlock({ chunks }: { chunks: string[] }) {
                 <div className="code-block-wrapper">
                   <div className="code-block-header">
                     <span className="code-block-lang">{match[1]}</span>
-                    <CopyButton text={codeStr} />
+                    <div style={{ display: "flex", gap: "4px" }}>
+                      <button 
+                        className="code-copy-btn" 
+                        onClick={() => setActiveArtifact({ title: "", content: codeStr, language: match[1] })}
+                        title="Open as Artifact"
+                      >
+                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h6v6" /><path d="M10 14 21 3" /><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" /></svg>
+                      </button>
+                      <CopyButton text={codeStr} />
+                    </div>
                   </div>
                   <SyntaxHighlighter
                     style={vscDarkPlus}
@@ -225,9 +251,10 @@ export function ResponseBlock({ chunks }: { chunks: string[] }) {
 }
 
 /* ── User Message ────────────────────────────────────── */
-export function UserMsg({ text }: { text: string }) {
+export function UserMsg({ text, index }: { text: string; index: number }) {
   return (
     <div className="msg msg-user">
+      <BranchBtn index={index} />
       <div className="msg-user-bubble">
         <span>{text}</span>
       </div>

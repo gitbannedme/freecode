@@ -9,6 +9,7 @@ import { Sidebar } from "./components/Sidebar";
 import { StatusBar } from "./components/StatusBar";
 import { ChatInput } from "./components/ChatInput";
 import { OverlayManager } from "./components/OverlayManager";
+import { ArtifactPanel } from "./components/ArtifactPanel";
 import { ChatProvider, useChatContext } from "./context/ChatContext";
 
 function HomeContent() {
@@ -23,7 +24,9 @@ function HomeContent() {
     serverRecents,
     showReloadBanner,
     setShowReloadBanner,
-    showOnboarding
+    showOnboarding,
+    activeArtifact,
+    setActiveArtifact
   } = useChatContext();
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -82,6 +85,15 @@ function HomeContent() {
             />
           )}
         </div>
+
+        {activeArtifact && (
+          <ArtifactPanel
+            title={activeArtifact.title}
+            content={activeArtifact.content}
+            language={activeArtifact.language}
+            onClose={() => setActiveArtifact(null)}
+          />
+        )}
       </div>
 
       <StatusBar setSidebarOpen={setSidebarOpen} />
