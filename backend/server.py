@@ -168,6 +168,7 @@ def _default_working_dir() -> str:
     return _cfg.get("working_dir", ".")
 
 WORKING_DIR = _cfg.get("working_dir") or _default_working_dir()
+PORT = int(os.environ.get("FC_BACKEND_PORT") or _cfg.get("backend_port", 47820))
 HOST = os.environ.get("FC_BACKEND_HOST") or _cfg.get("backend_host", "localhost")
 FRONTEND_PORT = int(os.environ.get("FC_FRONTEND_PORT") or _cfg.get("frontend_port", 47821))
 
@@ -319,13 +320,30 @@ async def lifespan(app: FastAPI):
             frontend_up = False
             try:
                 import socket
+                # Try IPv4 localhost
                 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                    s.settimeout(0.5)
+                    s.settimeout(0.2)
                     if s.connect_ex(("127.0.0.1", FRONTEND_PORT)) == 0:
                         frontend_up = True
+                # Try IPv6 localhost if IPv4 failed
+                if not frontend_up:
+                    with socket.socket(socket.AF_INET6, socket.SOCK_STREAM) as s:
+                        s.settimeout(0.2)
+                        if s.connect_ex(("::1", FRONTEND_PORT)) == 0:
+                            frontend_up = True
             except:
                 pass
             
+            # 2b. Fallback: check for active freecode process name
+            if not frontend_up and os.name == "nt":
+                try:
+                    import subprocess
+                    output = subprocess.check_output(["tasklist", "/FI", "IMAGENAME eq freecode.exe"], text=True)
+                    if "freecode.exe" in output.lower():
+                        frontend_up = True
+                except:
+                    pass
+
             if frontend_up:
                 if parent_lost_at:
                     logger.info("Frontend detected. Resetting shutdown timer.")

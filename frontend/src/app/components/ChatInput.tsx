@@ -73,7 +73,7 @@ export function ChatInput({
       {!connected ? (
         <div className="input-area input-area-offline">
           <span className="status-dot offline">●</span>
-          <span className="input-offline-msg">Disconnected — check backend</span>
+          <span className="input-offline-msg">Disconnected — attempting to reconnect</span>
         </div>
       ) : (
         <div className="input-container">
