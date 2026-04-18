@@ -22,15 +22,24 @@ if not exist node_modules (
     call npm install --silent >nul 2>&1
 )
 
+set PYTHON_EXE=python
+if exist venv\Scripts\python.exe set PYTHON_EXE=venv\Scripts\python.exe
+
 if not exist venv (
     echo [setup] Creating Python virtual environment...
     python -m venv venv
+    set PYTHON_EXE=venv\Scripts\python.exe
 )
 call venv\Scripts\activate.bat >nul 2>&1
 
-if not exist venv\Lib\site-packages\fastapi (
-    echo [setup] Installing Python dependencies...
-    pip install -q -r requirements.txt
+:: Check if all critical dependencies are present
+set MISSING_DEPS=0
+%PYTHON_EXE% -c "import fastapi, uvicorn, websockets, mcp" >nul 2>&1
+if errorlevel 1 set MISSING_DEPS=1
+
+if !MISSING_DEPS!==1 (
+    echo [setup] Installing/Updating Python dependencies...
+    %PYTHON_EXE% -m pip install -q -r requirements.txt
 )
 
 if not exist frontend\node_modules (
@@ -114,8 +123,8 @@ if %USE_TAURI%==1 (
 
     if "!PREPARE_SIDECAR!"=="1" (
         echo [setup] Building Tauri sidecar binary...
-        python scripts\prepare_sidecar.py
-        for /f %%h in ('python -c "import hashlib,pathlib; files=[pathlib.Path(p) for p in ['backend/server.py','agent_core/agent.py','agent_core/tools.py']]; data=b''.join(f.read_bytes() for f in files if f.exists()); print(hashlib.md5(data).hexdigest()[:8])"') do echo %%h>src-tauri\bin\.sidecar_hash
+        %PYTHON_EXE% scripts\prepare_sidecar.py
+        for /f %%h in ('%PYTHON_EXE% -c "import hashlib,pathlib; files=[pathlib.Path(p) for p in [\"backend/server.py\",\"agent_core/agent.py\",\"agent_core/tools.py\"]]; data=b\"\".join(f.read_bytes() for f in files if f.exists()); print(hashlib.md5(data).hexdigest()[:8])"') do echo %%h>src-tauri\bin\.sidecar_hash
     )
 
     echo [2/5] Launching via Tauri...

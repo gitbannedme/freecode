@@ -456,6 +456,9 @@ async def websocket_endpoint(websocket: WebSocket):
 
                     if msg.text == "__init__":
                         logger.info(f"[{session_id}] Session initialized, working_dir={session.agent.state.working_dir}")
+                        if data.get("api_key"):
+                            _save_api_key(data["api_key"])
+                            session.agent.client.api_key = data["api_key"]
                         continue
 
                     current_key = _load_config().get("api_key") or API_KEY
