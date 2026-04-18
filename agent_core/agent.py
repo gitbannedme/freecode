@@ -103,7 +103,7 @@ class Agent:
         self.client = genai.Client(api_key=api_key)
 
     async def process_input(
-        self, user_message: str, effort: str = "MEDIUM", working_dir: str = ".", model: str = None
+        self, user_message: str, effort: str = "MEDIUM", working_dir: str = ".", model: str = None, context_files: list[str] = None
     ) -> AsyncGenerator[dict, None]:
         """
         Main agentic loop.
@@ -117,6 +117,9 @@ class Agent:
         if model and self.model != model:
             self.model = model
             self.system_prompt = _build_system_prompt(str(self.state.working_dir), model)
+
+        if context_files:
+            user_message = f"User is focusing on: {', '.join(context_files)}\n\n{user_message}"
 
         self.state.add_message("user", user_message)
 

@@ -113,7 +113,7 @@ async def websocket_endpoint(websocket: WebSocket):
                     effort = msg.effort or "MEDIUM"
                     working_dir = msg.working_dir or str(session.agent.state.working_dir)
                     model = msg.model or MODEL
-                    async for event in session.process_input(msg.text, effort=effort, working_dir=working_dir, model=model):
+                    async for event in session.process_input(msg.text, effort=effort, working_dir=working_dir, model=model, context_files=msg.context_files):
                         server_msg = event_to_server_message(event)
                         await websocket.send_text(json.dumps(server_msg.to_json()))
 

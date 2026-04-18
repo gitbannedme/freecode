@@ -37,6 +37,7 @@ class ClientMessage:
     effort: Optional[str] = None  # MINIMAL | LOW | MEDIUM | HIGH
     working_dir: Optional[str] = None
     model: Optional[str] = None
+    context_files: Optional[list[str]] = None
 
     @classmethod
     def from_json(cls, data: dict) -> "ClientMessage":
@@ -47,6 +48,7 @@ class ClientMessage:
             effort=data.get("effort"),
             working_dir=data.get("working_dir"),
             model=data.get("model"),
+            context_files=data.get("context_files"),
         )
 
 

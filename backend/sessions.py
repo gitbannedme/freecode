@@ -97,13 +97,13 @@ class AgentSession:
         self.created_at = datetime.now()
         self.last_seen = datetime.now()
 
-    async def process_input(self, user_input: str, effort: str = "MEDIUM", working_dir: str = ".", model: str = None):
+    async def process_input(self, user_input: str, effort: str = "MEDIUM", working_dir: str = ".", model: str = None, context_files: list[str] = None):
         self.active = True
         self.last_seen = datetime.now()
         if working_dir and working_dir != ".":
             save_working_dir(working_dir)
         try:
-            async for event in self.agent.process_input(user_input, effort=effort, working_dir=working_dir, model=model):
+            async for event in self.agent.process_input(user_input, effort=effort, working_dir=working_dir, model=model, context_files=context_files):
                 yield event
             wdir = working_dir if working_dir and working_dir != "." else str(self.agent.state.working_dir)
             msgs = [{"role": m.role, "content": m.content} for m in self.agent.state.messages]
