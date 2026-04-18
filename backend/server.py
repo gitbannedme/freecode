@@ -5,7 +5,6 @@ import json
 import os
 import sys
 import logging
-import platform
 from pathlib import Path
 from datetime import datetime
 
@@ -109,11 +108,6 @@ def list_sessions_from_disk(working_dir: str) -> list:
 def _save_working_dir(path: str):
     try:
         abs_path = str(Path(path).resolve())
-        # Ensure the directory exists
-        Path(abs_path).mkdir(parents=True, exist_ok=True)
-        # Also ensure .freecode exists immediately
-        (Path(abs_path) / ".freecode").mkdir(parents=True, exist_ok=True)
-        
         try:
             cfg = _json.loads(_CONFIG_PATH.read_text())
         except (FileNotFoundError, _json.JSONDecodeError):

@@ -4,7 +4,7 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import Image from "next/image";
 import OnboardingModal from "./components/OnboardingModal";
 import SettingsPanel from "./components/SettingsPanel";
-import { getApiKey, saveApiKey, sendConfigToBackend, getConfigFromBackend } from "./lib/config";
+import { getApiKey, saveApiKey, getConfigFromBackend } from "./lib/config";
 
 import { FolderIcon, GearIcon, EditIcon, SearchIcon, PlusIcon, TrashIcon } from "./components/Icons";
 import { Popover } from "./components/Popover";
@@ -494,6 +494,7 @@ export default function Home() {
   const [showSettings, setShowSettings] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
+  const backendHasKey = useRef<boolean>(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -515,6 +516,7 @@ export default function Home() {
     // Initial config sync from backend to avoid repeated onboarding and restore project
     getConfigFromBackend().then(cfg => {
       if (cfg?.api_key) {
+        backendHasKey.current = true;
         saveApiKey(cfg.api_key);
         setShowOnboarding(false);
 
@@ -552,9 +554,10 @@ export default function Home() {
 
   const handleOnboardingComplete = useCallback(async (apiKey: string) => {
     saveApiKey(apiKey);
+    backendHasKey.current = false;
     setShowOnboarding(false);
 
-    // Reconnect WebSocket so backend picks up the new API key
+    // Reconnect WebSocket so backend picks up the new API key via __init__
     if (wsRef.current) {
       wsRef.current.close();
     }
@@ -758,16 +761,19 @@ export default function Home() {
         const savedSes = (() => { try { return JSON.parse(localStorage.getItem("freecode:sessions") || "{}"); } catch { return {}; } })();
         const sesId = localStorage.getItem(SESSION_ID_KEY) || sessionId;
         const sesDir = savedSes[sesId]?.workingDir || savedDir;
-        const apiKey = localStorage.getItem("freecode:api_key");
         if (sesDir) {
-          ws.send(JSON.stringify({ 
-            type: "user_input", 
-            text: "__init__", 
-            session_id: sesId, 
-            working_dir: sesDir, 
-            api_key: apiKey,
-            model: localStorage.getItem("freecode:model") || DEFAULT_MODEL 
-          }));
+          const initMsg: Record<string, string> = {
+            type: "user_input",
+            text: "__init__",
+            session_id: sesId,
+            working_dir: sesDir,
+            model: localStorage.getItem("freecode:model") || DEFAULT_MODEL
+          };
+          if (!backendHasKey.current) {
+            const apiKey = localStorage.getItem("freecode:api_key");
+            if (apiKey) initMsg.api_key = apiKey;
+          }
+          ws.send(JSON.stringify(initMsg));
           // Request sessions list for this working dir
           ws.send(JSON.stringify({ type: "list_sessions", working_dir: sesDir, session_id: sesId }));
         }
