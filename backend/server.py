@@ -296,21 +296,28 @@ def _get_or_create_session(session_id: str, working_dir: str = None, api_key: st
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     parent_pid = os.getppid()
+    parent_lost_at = None
 
     async def watch_parent():
-        logger.info(f"Monitoring parent process {parent_pid}...")
+        nonlocal parent_lost_at
+        logger.info(f"Monitoring parent process {parent_pid} with 30s grace period...")
         while True:
-            await asyncio.sleep(2)
+            await asyncio.sleep(5)
             try:
                 os.kill(parent_pid, 0)
-            except ProcessLookupError:
-                # Process doesn't exist
-                logger.info("Parent process gone, shutting down backend...")
-                os._exit(0)
-            except (PermissionError, OSError):
-                # PermissionError = access denied but process still alive (Windows)
-                # OSError for other reasons — assume alive
-                pass
+                parent_lost_at = None # Reset if found
+            except (ProcessLookupError, PermissionError, OSError) as e:
+                # If it's a ProcessLookupError, the parent is definitely gone.
+                # PermissionError/OSError might happen on Windows even if alive, 
+                # but for simplicity we treat "can't reach parent" as the start of the timer.
+                if parent_lost_at is None:
+                    parent_lost_at = asyncio.get_event_loop().time()
+                    logger.info("Parent process not reachable. Starting 30s shutdown timer...")
+                
+                elapsed = asyncio.get_event_loop().time() - parent_lost_at
+                if elapsed > 30:
+                    logger.info(f"Parent process missing for {int(elapsed)}s. Shutting down backend...")
+                    os._exit(0)
             except Exception:
                 pass
 
@@ -378,6 +385,54 @@ async def update_config(update: ConfigUpdate):
             cfg["compact_threshold"] = max(10, min(95, update.compact_threshold))
         _CONFIG_PATH.write_text(_json.dumps(cfg, indent=2))
         return {"status": "ok"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ── MCP endpoints ─────────────────────────────────────────────────────────────
+
+class McpServerParams(BaseModel):
+    type: str = "stdio"
+    command: str
+    args: list[str] = []
+
+@app.get("/api/mcp/servers")
+async def get_mcp_servers(session_id: str = "default"):
+    # We use the session's mcp_manager if the session exists, 
+    # otherwise we look at the working directory's config.
+    session = sessions.get(session_id)
+    if session:
+        return {"servers": session.agent.mcp_manager.list_servers()}
+    
+    # Fallback/Default: look at WORKING_DIR/.freecode/mcp_servers.json
+    try:
+        from agent_core.mcp_manager import McpManager
+        m = McpManager(config_path=os.path.join(WORKING_DIR, ".freecode", "mcp_servers.json"))
+        return {"servers": m.list_servers()}
+    except Exception as e:
+        return {"servers": {}, "error": str(e)}
+
+@app.post("/api/mcp/servers/{name}")
+async def add_mcp_server(name: str, params: McpServerParams, session_id: str = "default"):
+    session = _get_or_create_session(session_id)
+    try:
+        await session.agent.mcp_manager.add_server(name, params.dict(), session.agent.tools)
+        return {"status": "ok"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/mcp/servers/{name}")
+async def remove_mcp_server(name: str, session_id: str = "default"):
+    session = sessions.get(session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    
+    try:
+        success = await session.agent.mcp_manager.remove_server(name, session.agent.tools)
+        if success:
+            return {"status": "ok"}
+        else:
+            raise HTTPException(status_code=404, detail=f"Server {name} not found")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

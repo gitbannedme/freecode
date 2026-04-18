@@ -4,6 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import styles from "./OnboardingModal.module.css";
 import { EyeIcon, EyeOffIcon } from "./Icons";
+import { Button } from "./Button";
 
 async function openExternal(url: string) {
   const isTauri = typeof window !== "undefined" && !!(window as any).__TAURI_INTERNALS__;
@@ -107,13 +108,13 @@ export default function OnboardingModal({
           </p>
         </div>
 
-        <button
+        <Button
           onClick={handleComplete}
-          className={styles.cta}
+          fullWidth
           disabled={loading}
         >
           {loading ? "Saving…" : "Start coding"}
-        </button>
+        </Button>
       </div>
     </div>
   );

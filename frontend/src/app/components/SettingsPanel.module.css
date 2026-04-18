@@ -113,10 +113,12 @@
 
 .inputIconsWrapper {
     position: absolute;
-    right: 8px;
+    right: 6px;
     display: flex;
-    gap: 4px;
+    gap: 2px;
     align-items: center;
+    top: 50%;
+    transform: translateY(-50%);
 }
 
 .iconBtn {
@@ -138,8 +140,7 @@
 }
 
 .iconBtn svg {
-    width: 14px;
-    height: 14px;
+    display: block;
 }
 
 .error {
@@ -160,42 +161,6 @@
   padding: 10px;
   border-radius: 4px;
   border-left: 2px solid var(--status-success);
-}
-
-.buttons {
-  display: flex;
-  gap: 12px;
-  margin-top: 4px;
-}
-
-.buttonPrimary,
-.buttonSecondary {
-  padding: 10px 20px;
-  border: none;
-  border-radius: var(--radius);
-  font-size: 12px;
-  font-weight: 700;
-  font-family: var(--font-sans);
-  cursor: pointer;
-  transition: all 0.15s;
-  flex: 1;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.buttonPrimary {
-  background: var(--accent);
-  color: #000;
-}
-
-.buttonPrimary:hover {
-  filter: brightness(1.1);
-}
-
-.buttonSecondary {
-  background: transparent;
-  border: 1px solid var(--border);
-  color: var(--dim);
 }
 
 .buttonSecondary:hover {

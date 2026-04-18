@@ -322,36 +322,70 @@ function ProjectSelectScreen({ onSelect, onBrowse, recents }: {
   return (
     <div className="project-select-screen">
       <div className="project-select-card">
-        <div className="splash-bird" style={{ marginBottom: 12 }}>
-          <Image src="/logo.svg" width={56} height={56} alt="FreeCode Logo" priority />
+        
+        {/* Logo */}
+        <div className="splash-bird">
+          <Image src="/logo.svg" width={64} height={64} alt="FreeCode Logo" priority />
         </div>
-        <h1 className="splash-title" style={{ marginBottom: 4 }}>FREECODE</h1>
-        <p className="splash-subtitle" style={{ marginBottom: 4 }}>Your agentic coding assistant</p>
-        <p style={{ color: "var(--fg-dim)", fontSize: 12, marginBottom: 28, textTransform: "uppercase", letterSpacing: "0.1em" }}>Open a project to get started</p>
+        
+        {/* Titles */}
+        <h1 className="splash-title">FREECODE</h1>
+        <p className="splash-subtitle">Your personal agentic coding assistant.</p>
 
-        <div className="dir-input-wrapper" style={{ width: "100%", marginBottom: 12 }}>
-          <input
-            className="dir-input"
-            value={val}
-            onChange={e => setVal(e.target.value)}
-            onKeyDown={e => { if (e.key === "Enter") submit(val); }}
-            placeholder="C:\path\to\project"
-            autoFocus
-          />
-          <button className="dir-browse-icon" onClick={onBrowse} title="Browse...">
-            <FolderIcon />
-          </button>
+        {/* Restore Hints from Reference */}
+        <div className="splash-hints" style={{ marginTop: 24, marginBottom: 48 }}>
+           <div className="hint-row" style={{ display: "flex", alignItems: "center", gap: "10px", color: "var(--dim)", fontSize: "13px", marginBottom: "8px" }}>
+             <span style={{ color: "#6366f1", fontWeight: 600 }}>/model</span> <span>Choose your intelligence</span>
+           </div>
+           <div className="hint-row" style={{ display: "flex", alignItems: "center", gap: "10px", color: "var(--dim)", fontSize: "13px", marginBottom: "8px" }}>
+             <span style={{ color: "#6366f1", fontWeight: 600 }}>/compact</span> <span>Summarize and shrink context</span>
+           </div>
+           <div className="hint-row" style={{ display: "flex", alignItems: "center", gap: "10px", color: "var(--dim)", fontSize: "13px" }}>
+             <span style={{ color: "#6366f1", fontWeight: 600 }}>/help</span> <span>Review all commands</span>
+           </div>
+        </div>
+        
+        <div className="splash-action-container" style={{ marginTop: 0 }}>
+          <p className="splash-label">Open a project to get started</p>
+
+          {/* Input Box */}
+          <div className="splash-input-wrapper" style={{ marginBottom: 40 }}>
+            <input
+              className="splash-input"
+              value={val}
+              onChange={e => setVal(e.target.value)}
+              onKeyDown={e => { if (e.key === "Enter") submit(val); }}
+              placeholder="C:\path\to\project"
+              autoFocus
+            />
+            <button className="splash-browse-btn" onClick={onBrowse} title="Browse projects...">
+              <FolderIcon />
+              <span>Browse</span>
+            </button>
+          </div>
         </div>
 
+        {/* Recent Projects (Refined List) */}
         {allRecents.length > 0 && (
-          <div className="dir-recents-section" style={{ width: "100%" }}>
-            <div className="dir-recents-label">Recent</div>
-            {allRecents.map(d => (
-              <div key={d} className="dir-recent-row" onClick={() => submit(d)}>
-                <FolderIcon />
-                <span className="dir-recent-text" title={d}>{d}</span>
-              </div>
-            ))}
+          <div className="splash-recent-section">
+            <div className="dir-recents-label">RECENT</div>
+            <div className="splash-recent-list">
+              {allRecents.map(d => {
+                const parts = d.split(/[\\/]/).filter(Boolean);
+                const folderName = parts[parts.length - 1] || d;
+                return (
+                  <div key={d} className="splash-recent-item" onClick={() => submit(d)}>
+                    <div className="splash-recent-icon">
+                      <FolderIcon />
+                    </div>
+                    <div className="splash-recent-info">
+                      <div className="splash-recent-name">{folderName}</div>
+                      <div className="splash-recent-path" title={d}>{d}</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
       </div>

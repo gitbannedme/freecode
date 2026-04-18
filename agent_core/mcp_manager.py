@@ -35,8 +35,36 @@ class McpManager:
     def load_config(self):
         if not self.config_path.exists():
             return {"servers": {}}
-        with open(self.config_path, "r") as f:
-            return json.load(f)
+        try:
+            with open(self.config_path, "r") as f:
+                return json.load(f)
+        except Exception:
+            return {"servers": {}}
+
+    def list_servers(self):
+        return self.load_config().get("servers", {})
+
+    def save_config(self, config):
+        self.config_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(self.config_path, "w") as f:
+            json.dump(config, f, indent=2)
+
+    async def add_server(self, name: str, params: dict, tool_registry):
+        config = self.load_config()
+        if "servers" not in config:
+            config["servers"] = {}
+        config["servers"][name] = params
+        self.save_config(config)
+        await self.reload_all(tool_registry)
+
+    async def remove_server(self, name: str, tool_registry):
+        config = self.load_config()
+        if "servers" in config and name in config["servers"]:
+            del config["servers"][name]
+            self.save_config(config)
+            await self.reload_all(tool_registry)
+            return True
+        return False
 
     async def connect_all(self, tool_registry):
         config = self.load_config()

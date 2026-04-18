@@ -536,48 +536,173 @@ html, body {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   height: 60vh; padding: 40px; text-align: center;
 }
-.splash-bird { margin-bottom: 32px; }
-.splash-title { font-size: 32px; font-weight: 800; letter-spacing: 0.1em; color: #fff; margin-bottom: 12px; }
-.splash-subtitle { color: var(--dim); font-size: 14px; margin-bottom: 48px; }
-.splash-hints { display: flex; flex-direction: column; gap: 16px; width: 100%; max-width: 320px; text-align: left; opacity: 0.8; }
-.hint-row { font-size: 12px; color: var(--dim); display: flex; align-items: center; gap: 12px; }
-.hint-key { 
-  background: var(--dim3); color: var(--accent); padding: 4px 8px; border-radius: 4px; 
-  font-weight: 700; min-width: 80px; text-align: center; font-size: 11px;
+/* ── Logo & Glow ────────────────────────────── */
+.splash-bird {
+  margin-bottom: 24px;
+  display: flex;
+  justify-content: center;
 }
 
-/* ── Project Select Screen ───────────────────────────── */
+/* ── Typography System ────────────────────────── */
+.splash-title { 
+  font-size: 32px; 
+  font-weight: 800; 
+  letter-spacing: 0.15em; 
+  color: #fff;
+  line-height: 1;
+}
+
+.splash-subtitle { 
+  color: var(--dim); 
+  font-size: 13px; 
+  font-weight: 500;
+  margin-top: 12px;
+  letter-spacing: 0.05em;
+}
+
+/* ── Proportions & Container ───────────────────── */
 .project-select-screen {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   flex: 1; height: 100%; padding: 40px;
+  background: #0d1117; /* Slate dark background */
 }
+
 .project-select-card {
   display: flex; flex-direction: column; align-items: center;
-  width: 100%; max-width: 380px; text-align: center;
+  width: 100%; 
+  max-width: 520px; 
 }
 
-/* ── Help & Welcome ───────────────────────────────────── */
-.help-block { 
-  background: var(--bg-secondary); border: 1px solid var(--border-subtle); 
-  border-radius: 12px; padding: 20px; font-family: var(--font-sans);
-  max-width: 500px; margin: 10px 0;
+.splash-action-container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
-.help-header { 
-  font-size: 10px; color: var(--dim3); font-weight: 800; 
-  letter-spacing: 0.1em; margin-bottom: 20px; 
-}
-.help-row { 
-  display: flex; align-items: baseline; gap: 16px; margin-bottom: 14px; 
-}
-.help-name { 
-  color: var(--accent); font-weight: 600; font-size: 13px; font-family: var(--font-mono); 
-  cursor: pointer; transition: opacity 0.1s; min-width: 80px;
-}
-.help-name:hover { opacity: 0.7; }
-.help-desc { color: var(--dim); font-size: 13px; line-height: 1.4; }
 
-.clickable { cursor: pointer; transition: opacity 0.2s; }
-.clickable:hover { opacity: 0.7; }
+.splash-label, 
+.dir-recents-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: #4b5563;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+}
+
+/* ── Refined Input ──────────────────────────── */
+.splash-input-wrapper {
+  background: #111827; /* Physically lighter than the background for 'depth' */
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  transition: all 0.2s ease;
+  margin-bottom: 56px;
+}
+
+.splash-input-wrapper:focus-within {
+  box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.4);
+}
+
+.splash-input {
+  padding: 16px 20px;
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 15px; /* Slightly larger input text */
+  font-family: var(--font-mono);
+  outline: none;
+  flex: 1;
+}
+
+.splash-input::placeholder {
+  color: #374151;
+}
+
+.splash-browse-btn {
+  background: transparent;
+  border: none;
+  color: #6366f1; /* Accent color text */
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 20px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  transition: opacity 0.15s;
+}
+
+.splash-browse-btn:hover {
+  opacity: 0.7;
+}
+
+/* ── Minimalist Recents (Native Feel) ──────────── */
+.splash-recent-section {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.splash-recent-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.splash-recent-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 0; /* Vertical padding only, let's go edgeless */
+  cursor: pointer;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03); /* Whisper thin divider */
+  transition: background 0.15s;
+}
+
+.splash-recent-item:last-child {
+  border-bottom: none;
+}
+
+.splash-recent-item:hover {
+  background: rgba(255, 255, 255, 0.02);
+  padding-left: 8px;
+  padding-right: 8px;
+  margin-left: -8px;
+  margin-right: -8px;
+  border-radius: 8px;
+}
+
+.splash-recent-icon {
+  color: #6366f1;
+  opacity: 0.7;
+  display: flex;
+}
+
+.splash-recent-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.splash-recent-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.splash-recent-path {
+  font-size: 10.5px;
+  color: #4b5563;
+  direction: rtl;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .ctx-auto-group { display: flex; align-items: center; gap: 4px; margin-left: 4px; }
 .ctx-threshold-val { color: var(--accent); cursor: pointer; font-family: var(--font-mono); font-weight: 600; font-size: 10px; }
 .ctx-threshold-val:hover { text-decoration: underline; }
@@ -711,7 +836,20 @@ html, body {
   border-bottom: none;
 }
 
-.popover-header { padding: 8px 12px; color: var(--dim-text); font-size: 9px; font-weight: 700; text-transform: uppercase; border-bottom: 1px solid var(--border-subtle); letter-spacing: 0.05em; display: flex; align-items: center; justify-content: space-between; }
+.popover-header { 
+  padding: 8px 12px; 
+  color: var(--dim-text); 
+  font-size: 9px; 
+  font-weight: 700; 
+  text-transform: uppercase; 
+  border-bottom: 1px solid var(--border-subtle); 
+  letter-spacing: 0.05em; 
+  display: flex; 
+  align-items: center; 
+  justify-content: space-between; 
+  box-sizing: border-box;
+  min-height: 32px;
+}
 
 /* Keep old class names as aliases so nothing breaks during transition */
 .model-popover { position: absolute; bottom: calc(28px + 4px); left: 80px; width: 260px; background: var(--bg-step); border: 1px solid var(--border); border-radius: var(--radius-lg); z-index: 1000; animation: popIn 0.15s cubic-bezier(0.16, 1, 0.3, 1); overflow: hidden; }

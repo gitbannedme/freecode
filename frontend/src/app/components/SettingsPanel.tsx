@@ -2,8 +2,10 @@
  
 import { useState, useEffect } from "react";
 import styles from "./SettingsPanel.module.css";
-import { EyeIcon, EyeOffIcon, CopyIcon } from "./Icons";
+import { EyeIcon, EyeOffIcon, CopyIcon, SaveIcon, XIcon } from "./Icons";
 import { Popover } from "./Popover";
+import McpSettings from "./McpSettings";
+import { Button } from "./Button";
 import { getApiKey, saveApiKey, sendConfigToBackend } from "../lib/config";
  
 interface SettingsPanelProps {
@@ -56,7 +58,14 @@ export default function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
     <Popover onClose={onClose} className="popover-settings">
         <div className="popover-header">
           <span>Settings</span>
-          <button className={styles.closeBtn} onClick={onClose}>✕</button>
+          <div style={{ display: "flex", gap: "4px" }}>
+            <button className={styles.iconBtn} onClick={handleSave} title="Save Settings">
+                <SaveIcon />
+            </button>
+            <button className={styles.iconBtn} onClick={onClose} title="Close">
+                <XIcon />
+            </button>
+          </div>
         </div>
  
         <div className={styles.content}>
@@ -83,17 +92,12 @@ export default function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
             </div>
           </div>
  
+          <div className={styles.section}>
+            <McpSettings />
+          </div>
+
           {error && <p className={styles.error}>{error}</p>}
           {success && <p className={styles.success}>{success}</p>}
- 
-          <div className={styles.buttons}>
-            <button onClick={onClose} className={styles.buttonSecondary}>
-              Cancel
-            </button>
-            <button onClick={handleSave} className={styles.buttonPrimary}>
-              Save
-            </button>
-          </div>
         </div>
     </Popover>
   );

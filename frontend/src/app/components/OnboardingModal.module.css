@@ -160,20 +160,3 @@
 }
 
 /* ── CTA ─────────────────────────────────────────── */
-.cta {
-  width: 100%;
-  padding: 11px;
-  background: var(--accent);
-  color: #000;
-  border: none;
-  border-radius: var(--radius);
-  font-size: 13px;
-  font-weight: 700;
-  font-family: var(--font-sans);
-  cursor: pointer;
-  letter-spacing: 0.02em;
-  transition: filter 0.15s, transform 0.1s;
-}
-.cta:hover:not(:disabled) { filter: brightness(1.1); }
-.cta:active:not(:disabled) { transform: scale(0.99); }
-.cta:disabled { opacity: 0.5; cursor: not-allowed; }

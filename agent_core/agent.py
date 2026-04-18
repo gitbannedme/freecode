@@ -12,6 +12,7 @@ from google.genai import types
 from .state import SessionState, Message
 from .tools import ToolRegistry, FileSystemMCP, ShellMCP
 from .tools.mcp_server import AddMcpServerTool
+from .tools.mcp_remove_server import RemoveMcpServerTool
 from .mcp_manager import McpManager
 from .compaction import should_compact, compact_history
 
@@ -26,13 +27,13 @@ def _build_system_prompt(working_dir: str, model: str) -> str:
     else:
         shell = os.environ.get("SHELL", "bash")
 
-    return f"""You are FreeCode v2.0, an advanced, interactive agentic coding assistant developed to help users with software engineering tasks. Use the instructions below and the tools available to you to assist the user.
+    return f"""You are FreeCode, an advanced, interactive agentic coding assistant developed to help users with software engineering tasks. Use the instructions below and the tools available to you to assist the user.
 
 IMPORTANT: Assist with authorized security testing, defensive security, CTF challenges, and educational contexts. Refuse requests for destructive techniques or malicious use.
 IMPORTANT: You must NEVER generate or guess URLs for the user unless you are confident that the URLs are for helping the user with programming.
 
 # System & Identity
- - You are FreeCode v2.0. If the user asks for your name or identity, proudly state you are FreeCode v2.0.
+ - You are FreeCode. If the user asks for your name or identity, proudly state you are FreeCode v2.0.
  - You exist to analyze codebases, write code, run commands, and solve complex problems autonomously.
  - All text you output is displayed to the user. Use markdown for formatting.
  - The system will automatically compact prior messages as context approaches limits.
@@ -52,6 +53,7 @@ IMPORTANT: You must NEVER generate or guess URLs for the user unless you are con
  - `filesystem` tool: use for all file operations (ls, read, write, edit, find, delete). Do NOT use shell for file operations.
  - `shell` tool: use for build commands, tests, git, package managers.
  - `add_mcp_server` tool: use when the user asks to add an MCP server (e.g. sqlite). It writes to the config and hot-reloads the connection immediately.
+ - `remove_mcp_server` tool: use when the user asks to remove an MCP server.
  - IMPORTANT FOR SHELL: You are running on {plat}. If it is Windows, write valid Powershell or CMD commands (e.g. use `Remove-Item` instead of `rm`, `Get-ChildItem` instead of `ls` if needed, etc.).
  - Do NOT try to run `bash` commands like `rm -rf` on Windows unless running in WSL or Git Bash.
 
@@ -86,12 +88,13 @@ class Agent:
         self.state = SessionState(working_dir=working_dir, token_limit=token_limit)
         self.system_prompt = _build_system_prompt(working_dir, model)
 
-        self.mcp_manager = McpManager()
+        self.mcp_manager = McpManager(config_path=os.path.join(working_dir, ".freecode", "mcp_servers.json"))
         
         self.tools = ToolRegistry()
         self.tools.register(FileSystemMCP(working_dir=working_dir))
         self.tools.register(ShellMCP())
         self.tools.register(AddMcpServerTool(self.mcp_manager, self.tools))
+        self.tools.register(RemoveMcpServerTool(self.mcp_manager, self.tools))
         
         asyncio.create_task(self.mcp_manager.connect_all(self.tools))
 
