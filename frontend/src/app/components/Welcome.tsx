@@ -9,7 +9,7 @@ export function Welcome({ show, onRun }: { show: boolean; onRun: (cmd: string) =
   
   return (
     <div className="welcome-area">
-      <div className="pss-inner">
+      <div className="welcome-inner">
         {/* Branding */}
         <div className="pss-brand">
           <Image src="/logo.svg" width={40} height={40} alt="FreeCode" priority />

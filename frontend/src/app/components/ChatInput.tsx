@@ -123,7 +123,6 @@ export function ChatInput({
               placeholder={messages.length === 0 ? "What's the plan?" : ""}
               autoFocus
             />
-            {working && <span className="input-hint">running ▂▄▆</span>}
             {!working && input === "" && messages.length > 0 && (
               <span className="input-hint ghost">/ for commands · esc to clear</span>
             )}

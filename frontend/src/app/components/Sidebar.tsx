@@ -1,6 +1,5 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { FolderIcon, SearchIcon, PlusIcon, EditIcon, TrashIcon } from "./Icons";
-import { SESSION_ID_KEY } from "../lib/constants";
 import { useChatContext } from "../context/ChatContext";
 
 export function Sidebar({ open }: { open: boolean }) {
@@ -10,8 +9,11 @@ export function Sidebar({ open }: { open: boolean }) {
     setSavedSessions,
     working,
     sessionId,
+    messages,
     setDirPickerOpen,
-    setConfirmModal
+    setConfirmModal,
+    switchSession,
+    newChat,
   } = useChatContext();
 
   const [sessionSearch, setSessionSearch] = useState("");
@@ -58,16 +60,12 @@ export function Sidebar({ open }: { open: boolean }) {
             <button className="sidebar-header-btn" title="New Chat" onClick={() => {
               if (working) {
                 setConfirmModal({
-                    title: "New Chat",
-                    message: "Session is still working. Start new chat anyway?",
-                    onConfirm: () => {
-                      localStorage.removeItem(SESSION_ID_KEY);
-                      window.location.reload();
-                    }
+                  title: "New Chat",
+                  message: "Session is still working. Start new chat anyway?",
+                  onConfirm: () => newChat(),
                 });
               } else {
-                localStorage.removeItem(SESSION_ID_KEY);
-                window.location.reload();
+                newChat();
               }
             }}>
               <PlusIcon />
@@ -86,10 +84,7 @@ export function Sidebar({ open }: { open: boolean }) {
                 key={ses.id} 
                 className={`sidebar-item ${ses.id === sessionId ? "sidebar-item-active" : ""}`}
                 onClick={() => {
-                  if (ses.id !== sessionId) {
-                    localStorage.setItem(SESSION_ID_KEY, ses.id);
-                    window.location.reload();
-                  }
+                  if (ses.id !== sessionId) switchSession(ses.id);
                 }}
               >
                 <div className="sidebar-item-row">
@@ -146,8 +141,7 @@ export function Sidebar({ open }: { open: boolean }) {
                             return next;
                           });
                           if (ses.id === sessionId) {
-                            localStorage.removeItem(SESSION_ID_KEY);
-                            window.location.reload();
+                            newChat();
                           }
                           setConfirmModal(null);
                         }
@@ -157,7 +151,9 @@ export function Sidebar({ open }: { open: boolean }) {
                     <TrashIcon />
                   </button>
                 </div>
-                <div className="sidebar-item-time">{new Date(ses.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                {!(ses.id === sessionId && messages.length === 0) && (
+                  <div className="sidebar-item-time">{new Date(ses.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                )}
               </div>
             ));
           })()}

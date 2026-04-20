@@ -9,8 +9,10 @@ import json
 
 @dataclass
 class Message:
-    role: str  # "user" or "model"
+    role: str  # "user" | "model" | "tool"
     content: str
+    tool_call: dict = None  # {name, args}
+    tool_result: dict = None # {name, result}
     timestamp: float = field(default_factory=lambda: datetime.now().timestamp())
 
 
@@ -35,8 +37,8 @@ class SessionState:
         self.created_at = datetime.now().timestamp()
         self.file_modifications: dict[str, float] = {}  # path -> timestamp
 
-    def add_message(self, role: str, content: str) -> Message:
-        msg = Message(role=role, content=content)
+    def add_message(self, role: str, content: str, tool_call: dict = None, tool_result: dict = None) -> Message:
+        msg = Message(role=role, content=content, tool_call=tool_call, tool_result=tool_result)
         self.messages.append(msg)
         return msg
 
@@ -79,7 +81,13 @@ class SessionState:
             "working_dir": str(self.working_dir),
             "token_limit": self.token_limit,
             "messages": [
-                {"role": m.role, "content": m.content, "timestamp": m.timestamp}
+                {
+                    "role": m.role, 
+                    "content": m.content, 
+                    "tool_call": m.tool_call,
+                    "tool_result": m.tool_result,
+                    "timestamp": m.timestamp
+                }
                 for m in self.messages
             ],
             "tasks": [

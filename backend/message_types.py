@@ -27,6 +27,7 @@ class MessageType(str, Enum):
     ERROR = "error"
     FOLDER_PICKED = "folder_picked"
     CONFIG_CHANGED = "config_changed"
+    CANCEL_RESPONSE = "cancel_response"
 
 
 @dataclass
@@ -59,6 +60,7 @@ class ServerMessage:
     tool_name: Optional[str] = None
     tool_args: Optional[dict] = None
     result: Optional[str] = None
+    content: Optional[str] = None
     error: Optional[str] = None
     message: Optional[str] = None
     timestamp: float = 0.0
@@ -76,6 +78,8 @@ class ServerMessage:
             data["tool_args"] = self.tool_args
         if self.result is not None:
             data["result"] = self.result
+        if self.content is not None:
+            data["content"] = self.content
         if self.error is not None:
             data["error"] = self.error
         if self.message is not None:

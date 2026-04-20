@@ -205,13 +205,34 @@ class Agent:
                 types.Content(role="model", parts=[types.Part(text="Understood. I'm ready to assist.")]),
             ]
             is_first_response = len(messages) == 0
-            for msg in messages:
-                contents.append(
-                    types.Content(
-                        role="user" if msg["role"] == "tool" else msg["role"],
-                        parts=[types.Part(text=msg["content"])]
+            for msg in self.state.messages:
+                if msg.tool_call:
+                    contents.append(
+                        types.Content(
+                            role="model",
+                            parts=[types.Part(function_call=types.FunctionCall(
+                                name=msg.tool_call["name"],
+                                args=msg.tool_call["args"]
+                            ))]
+                        )
                     )
-                )
+                elif msg.tool_result:
+                    contents.append(
+                        types.Content(
+                            role="tool",
+                            parts=[types.Part(function_response=types.FunctionResponse(
+                                name=msg.tool_result["name"],
+                                response={"result": msg.tool_result["result"]}
+                            ))]
+                        )
+                    )
+                else:
+                    contents.append(
+                        types.Content(
+                            role=msg.role,
+                            parts=[types.Part(text=msg.content)]
+                        )
+                    )
 
             full_text = ""
             tool_call_found = None
@@ -254,13 +275,19 @@ class Agent:
                             break
 
             if tool_call_found:
-                args_str = json.dumps(tool_call_found.args) if tool_call_found.args else ""
-                self.state.add_message("model", f"Calling tool: {tool_call_found.name}({args_str})")
-
                 tool_name = tool_call_found.name
                 tool_args = dict(tool_call_found.args) if tool_call_found.args else {}
 
-                yield {"type": "tool_call", "name": tool_name, "args": tool_args}
+                self.state.add_message(
+                    "model",
+                    f"[tool_call:{tool_name}]",
+                    tool_call={"name": tool_name, "args": tool_args}
+                )
+
+                if full_text.strip():
+                    yield {"type": "cancel_response"}
+
+                yield {"type": "tool_call", "tool_name": tool_name, "tool_args": tool_args}
 
                 tool = self.tools.get(tool_name)
                 if not tool:
@@ -275,8 +302,22 @@ class Agent:
                     except Exception as e:
                         result = f"Error: {e}"
 
-                yield {"type": "tool_result", "name": tool_name, "result": result}
-                self.state.add_message("tool", f"Tool Result ({tool_name}):\n{result}")
+                # Capture content for implicit artifacts
+                tool_content = None
+                if tool_name == "filesystem":
+                    if tool_args.get("operation") == "write":
+                        tool_content = tool_args.get("content")
+                    elif tool_args.get("operation") == "edit":
+                        # For edit, we might want to read the file after, 
+                        # but for now we'll just pass the successful result.
+                        pass
+
+                yield {"type": "tool_result", "tool_name": tool_name, "result": result, "content": tool_content}
+                self.state.add_message(
+                    "tool", 
+                    f"Tool Result ({tool_name}):\n{result}",
+                    tool_result={"name": tool_name, "result": result}
+                )
                 # Continue the loop — model will see the tool result next iteration
                 continue
 

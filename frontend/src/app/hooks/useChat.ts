@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { MsgKind, SavedSession } from "../types/chat";
-import { 
-  BACKEND_URL, 
-  DEFAULT_MODEL, 
-  SESSION_ID_KEY, 
-  DEFAULT_THRESHOLD, 
-  COMPACT_THRESHOLD_KEY, 
+import {
+  BACKEND_URL,
+  DEFAULT_MODEL,
+  SESSION_ID_KEY,
+  DEFAULT_THRESHOLD,
+  COMPACT_THRESHOLD_KEY,
   AUTO_COMPACT_KEY,
   AUTO_OPEN_PROJECT_KEY,
   COMMANDS,
@@ -29,7 +29,7 @@ export function useChat() {
   const [messages, setMessages] = useState<MsgKind[]>([]);
   const [connected, setConnected] = useState(false);
   const [working, setWorking] = useState(false);
-  const [sessionId] = useState<string>(() =>
+  const [sessionId, setSessionId] = useState<string>(() =>
     typeof window !== "undefined" ? getOrCreateSessionId() : generateSessionId()
   );
   const [model, setModel] = useState(() => {
@@ -54,6 +54,9 @@ export function useChat() {
   });
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [showReloadBanner, setShowReloadBanner] = useState(false);
+  const [isLoadingSession, setIsLoadingSession] = useState(false);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set());
 
   // UI Overlays State
   const [modelPickerOpen, setModelPickerOpen] = useState(false);
@@ -81,15 +84,23 @@ export function useChat() {
     }
 
     if (msg.type === "session") {
+      setIsLoadingSession(false);
       setMessages(prev => {
         const hasConversation = prev.some(m => m.kind === "user" || m.kind === "response");
         if (!hasConversation && msg.messages && msg.messages.length > 0) {
-          return msg.messages.map((m: any) => {
-            if (m.role === "user") return { kind: "user", text: m.content };
-            if (m.role === "model") return { kind: "response", chunks: [m.content] };
-            if (m.role === "tool") return { kind: "tool_result", name: "Result", args: {}, result: m.content };
-            if (m.role === "system") return { kind: "system", text: m.content };
-            return { kind: "system", text: m.content };
+          return msg.messages.flatMap((m: any) => {
+            if (m.role === "user") return [{ kind: "user", text: m.content }];
+            if (m.role === "model") {
+              if (m.tool_call?.name) return [{ kind: "tool_call", name: m.tool_call.name, args: m.tool_call.args ?? {} }];
+              if (m.content?.startsWith("[tool_call:")) return [];
+              return [{ kind: "response", chunks: [m.content] }];
+            }
+            if (m.role === "tool") {
+              if (m.tool_result?.name) return [{ kind: "tool_result", name: m.tool_result.name, args: {}, result: m.tool_result.result ?? "", error: false }];
+              return [];
+            }
+            if (m.role === "system") return [{ kind: "system", text: m.content }];
+            return [];
           });
         }
         return prev;
@@ -131,6 +142,12 @@ export function useChat() {
           }
           break;
         }
+        case "cancel_response": {
+          for (let i = next.length - 1; i >= 0; i--) {
+            if (next[i].kind === "response") { next.splice(i, 1); break; }
+          }
+          break;
+        }
         case "tool_call": {
           const idx = next.length;
           pendingToolRef.current.set(msg.tool_name, idx);
@@ -147,14 +164,15 @@ export function useChat() {
                 name: block.name,
                 args: block.args,
                 result: msg.result ?? "",
-                error: msg.error
+                error: msg.error,
+                content: msg.content
               };
               found = true;
               break;
             }
           }
           if (!found) {
-            next.push({ kind: "tool_result", name: msg.tool_name, args: {}, result: msg.result ?? "", error: msg.error });
+            next.push({ kind: "tool_result", name: msg.tool_name, args: {}, result: msg.result ?? "", error: msg.error, content: msg.content });
           }
           break;
         }
@@ -380,15 +398,41 @@ export function useChat() {
     setConnectionError(null);
     setWorking(true);
     setMessages(prev => [...prev, { kind: "user", text }]);
-    
-    // Include pins in the message if any
+
     const finalMsg: any = { type: "user_input", text, effort, working_dir: workingDir ?? ".", model, session_id: sessionId };
     if (pinnedFiles.length > 0) {
       finalMsg.context_files = pinnedFiles;
     }
-    
+
     wsRef.current.send(JSON.stringify(finalMsg));
   }, [model, workingDir, effort, sessionId, pinnedFiles]);
+
+  const switchSession = useCallback((newId: string) => {
+    localStorage.setItem(SESSION_ID_KEY, newId);
+    setMessages([]);
+    setContextPct(null);
+    setWorking(false);
+    setIsLoadingSession(true);
+    setSessionId(newId);
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({
+        type: "user_input",
+        text: "__init__",
+        session_id: newId,
+        working_dir: workingDir ?? ".",
+        model: localStorage.getItem("freecode:model") || DEFAULT_MODEL,
+      }));
+    }
+  }, [workingDir]);
+
+  const newChat = useCallback(() => {
+    const newId = generateSessionId();
+    localStorage.setItem(SESSION_ID_KEY, newId);
+    setMessages([]);
+    setContextPct(null);
+    setWorking(false);
+    setSessionId(newId);
+  }, []);
 
   const handleDirSelect = (dir: string) => {
     if (dir === workingDir) return;
@@ -445,6 +489,11 @@ export function useChat() {
     activeArtifact, setActiveArtifact,
     pinnedFiles, setPinnedFiles,
     addPin, removePin,
-    branch
+    branch,
+    switchSession,
+    newChat,
+    isLoadingSession,
+    selectMode, setSelectMode,
+    selectedIndices, setSelectedIndices,
   };
 }

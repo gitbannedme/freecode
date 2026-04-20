@@ -115,7 +115,8 @@ async def websocket_endpoint(websocket: WebSocket):
                     model = msg.model or MODEL
                     async for event in session.process_input(msg.text, effort=effort, working_dir=working_dir, model=model, context_files=msg.context_files):
                         server_msg = event_to_server_message(event)
-                        await websocket.send_text(json.dumps(server_msg.to_json()))
+                        if server_msg is not None:
+                            await websocket.send_text(json.dumps(server_msg.to_json()))
 
                 elif msg.type == MessageType.CANCEL:
                     if session and session.active:

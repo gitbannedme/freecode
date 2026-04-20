@@ -1,16 +1,13 @@
-import React, { useCallback, useEffect } from "react";
+import { useCallback, useEffect } from "react";
 import { useChatContext } from "../context/ChatContext";
 import OnboardingModal from "./OnboardingModal";
-import SettingsPanel from "./SettingsPanel";
 import { ModelPicker, DirPicker } from "./Pickers";
 import { ConfirmModal } from "./ConfirmModal";
 import { getApiKey, saveApiKey } from "../lib/config";
-import { BACKEND_URL } from "../lib/constants";
 
 export function OverlayManager() {
   const {
     showOnboarding, setShowOnboarding,
-    showSettings, setShowSettings,
     modelPickerOpen, setModelPickerOpen,
     dirPickerOpen, setDirPickerOpen,
     confirmModal, setConfirmModal,
@@ -39,11 +36,6 @@ export function OverlayManager() {
         isOpen={showOnboarding}
         onComplete={handleOnboardingComplete}
         initialApiKey={getApiKey() || ""}
-      />
-
-      <SettingsPanel 
-        isOpen={showSettings} 
-        onClose={() => setShowSettings(false)} 
       />
 
       {modelPickerOpen && (

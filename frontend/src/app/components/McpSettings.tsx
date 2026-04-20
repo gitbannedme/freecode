@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import styles from "./McpSettings.module.css";
 import { PlusIcon, TrashIcon, XIcon, SaveIcon } from "./Icons";
 import { getMcpServers, addMcpServer, removeMcpServer, McpServer } from "../lib/mcp";
-import { Button } from "./Button";
 
 export default function McpSettings() {
   const [servers, setServers] = useState<Record<string, McpServer>>({});
@@ -13,6 +12,7 @@ export default function McpSettings() {
   const [newCommand, setNewCommand] = useState("");
   const [newArgs, setNewArgs] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const fetchServers = async () => {
     const data = await getMcpServers();
@@ -24,7 +24,11 @@ export default function McpSettings() {
   }, []);
 
   const handleAdd = async () => {
-    if (!newName || !newCommand) return;
+    if (!newName || !newCommand) {
+      setError(!newName ? "Name is required." : "Command is required.");
+      return;
+    }
+    setError("");
     setLoading(true);
     const success = await addMcpServer(newName, {
       type: "stdio",
@@ -100,6 +104,7 @@ export default function McpSettings() {
               />
             </div>
           </div>
+        {error && <p className={styles.formError}>{error}</p>}
         </div>
       )}
 

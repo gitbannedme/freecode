@@ -167,3 +167,10 @@
   gap: 8px;
   margin-top: 4px;
 }
+
+.formError {
+  font-size: 11px;
+  color: var(--status-error, #f85149);
+  margin: 0;
+  padding: 0 2px;
+}
