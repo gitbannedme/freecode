@@ -1,5 +1,6 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
+from pathlib import Path
 from backend.config import load_config, save_config, API_KEY, MODEL, WORKING_DIR, THINKING
 
 router = APIRouter(prefix="/api")
@@ -20,6 +21,30 @@ async def get_config():
         "auto_compact": cfg.get("auto_compact", True),
         "compact_threshold": cfg.get("compact_threshold", 80),
     }
+
+@router.get("/files")
+async def list_files(dir: str = Query(default=""), query: str = Query(default=""), kind: str = Query(default="file")):
+    base = Path(dir).resolve() if dir else Path(WORKING_DIR).resolve()
+    if not base.exists() or not base.is_dir():
+        raise HTTPException(status_code=400, detail="Directory not found")
+    q = query.lower()
+    results: list[str] = []
+    want_dirs = kind == "folder"
+    try:
+        for entry in sorted(base.rglob("*")):
+            if want_dirs and not entry.is_dir():
+                continue
+            if not want_dirs and not entry.is_file():
+                continue
+            rel = str(entry.relative_to(base))
+            if not q or q in rel.lower():
+                results.append(str(entry))
+                if len(results) >= 50:
+                    break
+    except PermissionError:
+        pass
+    return {"files": results}
+
 
 class ConfigUpdate(BaseModel):
     api_key: str | None = None
