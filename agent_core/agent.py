@@ -10,7 +10,14 @@ from google import genai
 from google.genai import types
 
 from .state import SessionState, Message
-from .tools import ToolRegistry, FileSystemMCP, ShellMCP
+from .tools import (
+    ToolRegistry,
+    ReadFileTool, WriteFileTool, EditFileTool, ListDirectoryTool, FindFilesTool, DeleteFileTool,
+    RunCommandTool,
+    GrepSearchTool,
+    GitStatusTool, GitDiffTool, GitLogTool, GitAddTool, GitCommitTool,
+    GitPushTool, GitPullTool, GitBranchTool, GitCheckoutTool,
+)
 from .tools.mcp_server import AddMcpServerTool
 from .tools.mcp_remove_server import RemoveMcpServerTool
 from .mcp_manager import McpManager
@@ -50,8 +57,10 @@ IMPORTANT: You must NEVER generate or guess URLs for the user unless you are con
  - Carefully consider the reversibility and blast radius of actions.
 
 # Using your tools
- - `filesystem` tool: use for all file operations (ls, read, write, edit, find, delete). Do NOT use shell for file operations.
- - `shell` tool: use for build commands, tests, git, package managers.
+ - Filesystem: `filesystem/read`, `filesystem/write`, `filesystem/edit`, `filesystem/list`, `filesystem/find`, `filesystem/delete`. Use these for all file operations — do NOT use shell for files.
+ - Search: `search/grep` — regex search across files with optional glob filter.
+ - Git: `git/status`, `git/diff`, `git/log`, `git/add`, `git/commit`, `git/push`, `git/pull`, `git/branch`, `git/checkout`.
+ - Shell: `shell/run` — for build commands, tests, package managers, and anything not covered above.
  - `add_mcp_server` tool: use when the user asks to add an MCP server (e.g. sqlite). It writes to the config and hot-reloads the connection immediately.
  - `remove_mcp_server` tool: use when the user asks to remove an MCP server.
  - IMPORTANT FOR SHELL: You are running on {plat}. If it is Windows, write valid Powershell or CMD commands (e.g. use `Remove-Item` instead of `rm`, `Get-ChildItem` instead of `ls` if needed, etc.).
@@ -91,12 +100,21 @@ class Agent:
         self.mcp_manager = McpManager(config_path=os.path.join(working_dir, ".freecode", "mcp_servers.json"))
         
         self.tools = ToolRegistry()
-        self.tools.register(FileSystemMCP(working_dir=working_dir))
-        self.tools.register(ShellMCP())
+        self._register_core_tools(working_dir)
         self.tools.register(AddMcpServerTool(self.mcp_manager, self.tools))
         self.tools.register(RemoveMcpServerTool(self.mcp_manager, self.tools))
-        
-        asyncio.create_task(self.mcp_manager.connect_all(self.tools))
+
+    def _register_core_tools(self, working_dir: str):
+        for tool in [
+            ReadFileTool(working_dir), WriteFileTool(working_dir), EditFileTool(working_dir),
+            ListDirectoryTool(working_dir), FindFilesTool(working_dir), DeleteFileTool(working_dir),
+            GrepSearchTool(working_dir),
+            GitStatusTool(working_dir), GitDiffTool(working_dir), GitLogTool(working_dir),
+            GitAddTool(working_dir), GitCommitTool(working_dir), GitPushTool(working_dir),
+            GitPullTool(working_dir), GitBranchTool(working_dir), GitCheckoutTool(working_dir),
+            RunCommandTool(working_dir),
+        ]:
+            self.tools.register(tool)
 
     def update_api_key(self, api_key: str):
         """Replace the SDK client with a fresh one using the new key."""
@@ -112,7 +130,7 @@ class Agent:
         if working_dir and str(self.state.working_dir) != str(os.path.abspath(working_dir)):
             self.state.working_dir = os.path.abspath(working_dir)
             self.system_prompt = _build_system_prompt(working_dir, self.model)
-            self.tools.register(FileSystemMCP(working_dir=working_dir))
+            self._register_core_tools(working_dir)
 
         if model and self.model != model:
             self.model = model
@@ -295,7 +313,7 @@ class Agent:
                 else:
                     try:
                         result = await tool.execute(**tool_args)
-                        if tool_name == "filesystem" and tool_args.get("operation") in ("write", "edit"):
+                        if tool_name in ("filesystem/write", "filesystem/edit"):
                             self.state.track_file_modification(tool_args.get("path", ""))
                         elif tool_name == "add_mcp_server":
                             yield {"type": "config_changed", "message": "MCP Server configuration changed"}
@@ -304,13 +322,8 @@ class Agent:
 
                 # Capture content for implicit artifacts
                 tool_content = None
-                if tool_name == "filesystem":
-                    if tool_args.get("operation") == "write":
-                        tool_content = tool_args.get("content")
-                    elif tool_args.get("operation") == "edit":
-                        # For edit, we might want to read the file after, 
-                        # but for now we'll just pass the successful result.
-                        pass
+                if tool_name == "filesystem/write":
+                    tool_content = tool_args.get("content")
 
                 yield {"type": "tool_result", "tool_name": tool_name, "result": result, "content": tool_content}
                 self.state.add_message(

@@ -1,6 +1,18 @@
 export const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "ws://127.0.0.1:47820";
 export const DEFAULT_MODEL = process.env.NEXT_PUBLIC_MODEL || "gemma-4-26b-a4b-it";
 
+export const MODEL_FILE_WHITELIST = {
+  images: ["jpg", "jpeg", "png", "gif", "webp", "svg", "bmp", "ico"],
+  files: ["txt", "md", "json", "js", "ts", "tsx", "jsx", "py", "go", "rs", "html", "css", "pdf", "zip", "tar", "gz", "yaml", "yml", "toml", "ini", "env"],
+};
+
+export type AcceptedFile = {
+  name: string;
+  type: "image" | "file";
+  size: number;
+  data: ArrayBuffer;
+};
+
 export const MODELS: { label: string; id: string; provider: string }[] = [
   { label: "Gemma 4 31B",             id: "gemma-4-31b-it", provider: "Gemma" },
   { label: "Gemma 4 26B",             id: "gemma-4-26b-a4b-it", provider: "Gemma" },

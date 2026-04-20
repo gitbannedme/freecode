@@ -9,19 +9,16 @@ import {
   AUTO_COMPACT_KEY,
   AUTO_OPEN_PROJECT_KEY,
   COMMANDS,
-  EFFORT_LEVELS
+  EFFORT_LEVELS,
+  MODEL_FILE_WHITELIST,
 } from "../lib/constants";
 import { generateSessionId, getOrCreateSessionId, saveRecentDir } from "../lib/utils";
 
 export function useChat() {
   const [workingDir, setWorkingDir] = useState<string | null>(() => {
     if (typeof window === "undefined") return null;
-    
-    // 1. Session override (if we picked a project in this tab)
     const sessionDir = sessionStorage.getItem("freecode:active_project");
     if (sessionDir) return sessionDir;
-
-    // 2. Default startup behavior
     const shouldAutoOpen = localStorage.getItem(AUTO_OPEN_PROJECT_KEY) !== "false";
     if (!shouldAutoOpen) return null;
     return localStorage.getItem("freecode:working_dir") || null;
@@ -57,14 +54,15 @@ export function useChat() {
   const [isLoadingSession, setIsLoadingSession] = useState(false);
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set());
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   // UI Overlays State
   const [modelPickerOpen, setModelPickerOpen] = useState(false);
   const [dirPickerOpen, setDirPickerOpen] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [confirmModal, setConfirmModal] = useState<{ title: string; message: string; onConfirm: () => void } | null>(null);
-  const [showOnboarding, setShowOnboarding] = useState(false);
-  
+
   // Artifact & Branching State
   const [activeArtifact, setActiveArtifact] = useState<{ title: string; content: string; language: string } | null>(null);
   const [pinnedFiles, setPinnedFiles] = useState<string[]>([]);
@@ -203,297 +201,4 @@ export function useChat() {
           }
           break;
         }
-        case "done":
-          setWorking(false);
-          for (let i = next.length - 1; i >= 0; i--) {
-            const block = next[i];
-            if (block.kind === "thinking") {
-              block.done = true;
-              break;
-            }
-          }
-          if (msg.context_pct != null) {
-            setContextPct(msg.context_pct);
-          }
-          break;
-        case "error":
-          next.push({ kind: "error", text: msg.error ?? "Unknown error" });
-          setWorking(false);
-          break;
-      }
-      return next;
-    });
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem(COMPACT_THRESHOLD_KEY, String(compactThreshold));
-  }, [compactThreshold]);
-
-  useEffect(() => {
-    localStorage.setItem(AUTO_COMPACT_KEY, String(autoCompact));
-  }, [autoCompact]);
-
-  useEffect(() => {
-    localStorage.setItem(AUTO_OPEN_PROJECT_KEY, String(autoOpenProject));
-  }, [autoOpenProject]);
-
-  useEffect(() => {
-    localStorage.setItem("freecode:model", model);
-  }, [model]);
-
-  useEffect(() => {
-    if (contextPct == null) return;
-    if (contextPct < compactThreshold) {
-      autoCompactFiredAbove.current = false;
-      return;
-    }
-    if (autoCompact && !autoCompactFiredAbove.current && messages.length > 5 && wsRef.current?.readyState === WebSocket.OPEN) {
-      autoCompactFiredAbove.current = true;
-      wsRef.current.send(JSON.stringify({ type: "user_input", text: "Please summarize our conversation so far to compact the context.", effort, session_id: sessionId }));
-    }
-  }, [contextPct, autoCompact, compactThreshold, effort, sessionId, messages.length]);
-
-  useEffect(() => {
-    const BACKEND_HTTP = BACKEND_URL.replace(/^ws/, "http");
-    let cancelled = false;
-    async function tryFetch(attemptsLeft: number, delay: number) {
-      if (cancelled) return;
-      try {
-        const r = await fetch(`${BACKEND_HTTP}/api/config`);
-        if (!r.ok) throw new Error("not ok");
-        const cfg: { api_key?: string } = await r.json();
-        if (cancelled) return;
-        if (cfg.api_key) {
-          import("../lib/config").then(({ saveApiKey: saveKey }) => saveKey(cfg.api_key!));
-          setShowOnboarding(false);
-        }
-      } catch {
-        if (attemptsLeft > 0 && !cancelled) {
-          setTimeout(() => tryFetch(attemptsLeft - 1, Math.min(delay * 1.5, 5000)), delay);
-        }
-      }
-    }
-    tryFetch(8, 600);
-    return () => { cancelled = true; };
-  }, []);
-
-  useEffect(() => {
-    let retryTimeout: ReturnType<typeof setTimeout> | null = null;
-    let retryDelay = 1000;
-    let dead = false;
-
-    function connect() {
-      const ws = new WebSocket(BACKEND_URL);
-      ws.onopen = () => {
-        setConnected(true);
-        setConnectionError(null);
-        retryDelay = 1000;
-        const savedDir = localStorage.getItem("freecode:working_dir");
-        const sesId = localStorage.getItem(SESSION_ID_KEY) || sessionId;
-        const initMsg: Record<string, string> = {
-          type: "user_input",
-          text: "__init__",
-          session_id: sesId,
-          model: localStorage.getItem("freecode:model") || DEFAULT_MODEL
-        };
-        if (savedDir) initMsg.working_dir = savedDir;
-        if (!backendHasKey.current) {
-          const apiKey = localStorage.getItem("freecode:api_key");
-          if (apiKey) initMsg.api_key = apiKey;
-        }
-        ws.send(JSON.stringify(initMsg));
-        if (savedDir) {
-          ws.send(JSON.stringify({ type: "list_sessions", working_dir: savedDir, session_id: sesId }));
-        }
-      };
-      ws.onclose = () => {
-        if (wsRef.current === ws) {
-          setConnected(false);
-          setWorking(false);
-          wsRef.current = null;
-        }
-        if (!dead) retryTimeout = setTimeout(connect, retryDelay = Math.min(retryDelay * 2, 10000));
-      };
-      ws.onerror = () => {};
-      ws.onmessage = e => handleServerMessage(e.data);
-      wsRef.current = ws;
-    }
-
-    connect();
-    return () => {
-      dead = true;
-      if (retryTimeout) clearTimeout(retryTimeout);
-      wsRef.current?.close();
-    };
-  }, [handleServerMessage, sessionId]);
-
-  const runCommand = useCallback((rawInput: string) => {
-    const name = rawInput.split(" ")[0];
-    switch (name) {
-      case "/clear":
-        setMessages([]);
-        setContextPct(0);
-        if (wsRef.current?.readyState === WebSocket.OPEN) {
-          wsRef.current.send(JSON.stringify({ type: "user_input", text: "/clear", effort, session_id: sessionId }));
-        }
-        break;
-      case "/model": {
-        const parts = rawInput.split(" ");
-        if (parts.length > 1) {
-          const newModel = parts[1];
-          setModel(newModel);
-          setMessages(p => [...p, { kind: "system", text: `Model switched to ${newModel}` }]);
-        } else {
-          setMessages(p => [...p, { kind: "system", text: `Current model: ${model} (type /model [name] to switch)` }]);
-        }
-        break;
-      }
-      case "/cwd":
-        setMessages(p => [...p, { kind: "system", text: `Working dir: ${workingDir ?? "."}` }]);
-        break;
-      case "/tools":
-        setMessages(p => [...p, { kind: "system", text: "Available tools: filesystem (ls, read, write, edit, find), shell (run)" }]);
-        break;
-      case "/help":
-        setMessages(p => [...p, { kind: "help", commands: COMMANDS }]);
-        break;
-      case "/effort": {
-        const next = EFFORT_LEVELS[(EFFORT_LEVELS.indexOf(effort) + 1) % EFFORT_LEVELS.length];
-        setEffort(next);
-        break;
-      }
-      case "/compact":
-        if (wsRef.current?.readyState === WebSocket.OPEN)
-          wsRef.current.send(JSON.stringify({ type: "user_input", text: "/compact \u2014 please summarize our conversation so far", effort, session_id: sessionId }));
-        break;
-    }
-  }, [effort, workingDir, sessionId, model]);
-
-  const branch = useCallback((index: number) => {
-    setMessages(prev => {
-      const history = prev.slice(0, index + 1);
-      const lastUserIdx = history.map(m => m.kind).lastIndexOf("user");
-      if (lastUserIdx !== -1) {
-        // We find the last user message in the truncated history
-        // and prepare to re-send it or edit it.
-        // For now, we just truncate and let the user re-type or we can auto-fill the input.
-      }
-      return history;
-    });
-  }, []);
-
-  const addPin = useCallback((file: string) => {
-    setPinnedFiles(prev => prev.includes(file) ? prev : [...prev, file]);
-  }, []);
-
-  const removePin = useCallback((file: string) => {
-    setPinnedFiles(prev => prev.filter(f => f !== file));
-  }, []);
-
-  const sendMessage = useCallback((text: string) => {
-    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
-      setConnectionError("Connection lost. Reconnecting...");
-      return;
-    }
-    setConnectionError(null);
-    setWorking(true);
-    setMessages(prev => [...prev, { kind: "user", text }]);
-
-    const finalMsg: any = { type: "user_input", text, effort, working_dir: workingDir ?? ".", model, session_id: sessionId };
-    if (pinnedFiles.length > 0) {
-      finalMsg.context_files = pinnedFiles;
-    }
-
-    wsRef.current.send(JSON.stringify(finalMsg));
-  }, [model, workingDir, effort, sessionId, pinnedFiles]);
-
-  const switchSession = useCallback((newId: string) => {
-    localStorage.setItem(SESSION_ID_KEY, newId);
-    setMessages([]);
-    setContextPct(null);
-    setWorking(false);
-    setIsLoadingSession(true);
-    setSessionId(newId);
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({
-        type: "user_input",
-        text: "__init__",
-        session_id: newId,
-        working_dir: workingDir ?? ".",
-        model: localStorage.getItem("freecode:model") || DEFAULT_MODEL,
-      }));
-    }
-  }, [workingDir]);
-
-  const newChat = useCallback(() => {
-    const newId = generateSessionId();
-    localStorage.setItem(SESSION_ID_KEY, newId);
-    setMessages([]);
-    setContextPct(null);
-    setWorking(false);
-    setSessionId(newId);
-  }, []);
-
-  const handleDirSelect = (dir: string) => {
-    if (dir === workingDir) return;
-    const newSessionId = generateSessionId();
-    localStorage.setItem(SESSION_ID_KEY, newSessionId);
-    localStorage.setItem("freecode:working_dir", dir);
-    sessionStorage.setItem("freecode:active_project", dir);
-    saveRecentDir(dir);
-    window.location.reload();
-  };
-
-  const handleBrowse = async () => {
-    const isTauri = typeof window !== "undefined" && !!(window as any).__TAURI_INTERNALS__;
-    if (isTauri) {
-      try {
-        const { open } = await import("@tauri-apps/plugin-dialog");
-        const picked = await open({ directory: true, multiple: false });
-        if (picked) handleDirSelect(picked as string);
-        return;
-      } catch (e) { console.error(e); }
-    }
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({ type: "pick_dir", session_id: sessionId }));
-    }
-  };
-
-  return {
-    messages, setMessages,
-    connected,
-    working, setWorking,
-    sessionId,
-    model, setModel,
-    effort, setEffort,
-    workingDir, setWorkingDir,
-    serverRecents,
-    contextPct, setContextPct,
-    savedSessions, setSavedSessions,
-    compactThreshold, setCompactThreshold,
-    autoCompact, setAutoCompact,
-    autoOpenProject, setAutoOpenProject,
-    connectionError, setConnectionError,
-    showReloadBanner, setShowReloadBanner,
-    runCommand,
-    sendMessage,
-    handleDirSelect,
-    handleBrowse,
-    wsRef,
-    backendHasKey,
-    modelPickerOpen, setModelPickerOpen,
-    dirPickerOpen, setDirPickerOpen,
-    showSettings, setShowSettings,
-    confirmModal, setConfirmModal,
-    showOnboarding, setShowOnboarding,
-    activeArtifact, setActiveArtifact,
-    pinnedFiles, setPinnedFiles,
-    addPin, removePin,
-    branch,
-    switchSession,
-    newChat,
-    isLoadingSession,
-    selectMode, setSelectMode,
-    selectedIndices, setSelectedIndices,
-  };
-}
+        case
